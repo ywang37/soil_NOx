@@ -8,9 +8,12 @@ import datetime
 import glob
 import numpy as np
 
+from mylib.conversion import vmr_to_molec_cm2
 from mylib.gc_io.read_nd49 import read_nd49_resample
 from mylib.pro_omi_no2_l2.io_omi_no2_l2 import read_OMI_NO2_L2
+from mylib.pro_omi_no2_l2.pro_omi_no2_l2 import QC_OMI_NO2_L2
 from mylib.pro_satellite.sat_model_sample import sat_model_sample
+from mylib.pro_satellite.sat_model_sample import save_sat_model_sample
 
 #######################
 # Start user parameters
@@ -22,13 +25,16 @@ runs/geosfp_2x25_tropchem_201806/ND49/'
 
 sat_dir = '/Dedicated/jwang-data/shared_satData/OMI_NO2_L2/2018/06/'
 
+out_dir = '../data/'
+
 startDate = '2018-06-28'
 endDate   = '2018-06-28'
 
 
 
 
-mod_varname_list = ['IJ-AVG-$_NO2']
+mod_varname_list = ['IJ-AVG-$_NO2', 'TIME-SER_AIRDEN', \
+        'BXHGHT-$_BXHEIGHT', 'PEDGE-$_PSURF']
 
 # mod_coord_dict
 mod_coord_dict = {}
@@ -39,6 +45,11 @@ mod_coord_dict['mod_lat_step']  =    2.0
 mod_coord_dict['mod_lon_start'] = -181.25
 mod_coord_dict['mod_lon_end']   =  178.75
 mod_coord_dict['mod_lon_step']  =    2.5
+
+sat_varname_list = [\
+        '/HDFEOS/SWATHS/ColumnAmountNO2/Data Fields/TropopausePressure'
+        ]
+
 
 verbose = True
 
@@ -100,13 +111,32 @@ while currDate_D <= endDate_D:
         # read satellite file
         sat_file = all_sat_files[i]
         print('  reading ' + sat_file)
-        sat_data = read_OMI_NO2_L2(sat_file, verbose=verbose)
+        sat_data = read_OMI_NO2_L2(sat_file, varnames=sat_varname_list,
+                verbose=verbose)
+
+        # quality control
+        sat_NO2_trop = sat_data['ColumnAmountNO2Trop']
+        sza          = sat_data['SolarZenithAngle']
+        vza          = sat_data['ViewingZenithAngle']
+        CF           = sat_data['CloudFraction']
+        XTtrackQ     = sat_data['XTrackQualityFlags']
+        vcdQ         = sat_data['VcdQualityFlags']
+        TerrRef      = sat_data['TerrainReflectivity']
+        sat_flag = QC_OMI_NO2_L2(sat_NO2_trop, sza, vza, CF, 
+                XTtrackQ, vcdQ, TerrRef)
+
+        # unit conversion (ppbv => molec/cm2)
+        # at every layer
+        mod_NO2 = vmr_to_molec_cm2(model_data['IJ-AVG-$_NO2'],
+                model_data['TIME-SER_AIRDEN'], model_data['BXHGHT-$_BXHEIGHT'])
+
 
         # Sample model results according satellite observations
         # and regrid satellite observations to model grids.
         mod_TAI93 = model_data['TAI93']
         mod_var_dict = {}
-        mod_var_dict['NO2'] = model_data['IJ-AVG-$_NO2']
+        mod_var_dict['NO2'] = mod_NO2
+        mod_var_dict['PEdge_Bot'] = model_data['PEDGE-$_PSURF']
         sat_lat = sat_data['Latitude']
         sat_lon = sat_data['Longitude']
         sat_TAI93 = np.tile(sat_data['Time'], sat_lat.shape[1])
@@ -117,27 +147,26 @@ while currDate_D <= endDate_D:
         print(sat_TAI93[1,:])
         sat_obs_dict = {}
         sat_obs_dict['ColumnAmountNO2Trop'] = sat_data['ColumnAmountNO2Trop']
-        sat_model_sample(mod_coord_dict, mod_TAI93, mod_var_dict,
-                sat_lat, sat_lon, sat_TAI93, sat_obs_dict)
+        sat_obs_dict['TropopausePressure'] = sat_data['TropopausePressure']
+        sat_obs_dict['AmfTrop'] = sat_data['AmfTrop']
+        sat_obs_dict['ScatteringWeight'] = sat_data['ScatteringWeight']
+        sat_mod_dict = \
+                sat_model_sample(mod_coord_dict, mod_TAI93, mod_var_dict,
+                sat_lat, sat_lon, sat_TAI93, sat_obs_dict,
+                sat_flag=sat_flag)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        # save data
+        lon, lat = np.meshgrid(model_data['longitude'], model_data['latitude'])
+        sat_mod_dict['Latitude']  = lat
+        sat_mod_dict['Longitude'] = lon
+        lon_e, lat_e = \
+                np.meshgrid(model_data['longitude_e'], 
+                        model_data['latitude_e'])
+        sat_mod_dict['Latitude_e']   = lat_e
+        sat_mod_dict['Longitude_e']  = lon_e
+        out_file = out_dir + 'model_satellite_' + \
+                sat_file.split('/')[-1][18:32] + '.nc'
+        save_sat_model_sample(out_file, sat_mod_dict)
 
 
     # go to next day
