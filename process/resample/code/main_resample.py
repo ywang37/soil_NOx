@@ -164,6 +164,8 @@ while currDate_D <= endDate_D:
                         model_data['latitude_e'])
         sat_mod_dict['Latitude_e']   = lat_e
         sat_mod_dict['Longitude_e']  = lon_e
+        sat_mod_dict['sat_ScatteringWtPressure'] = \
+                sat_data['ScatteringWtPressure']
         out_file = out_dir + 'model_satellite_' + \
                 sat_file.split('/')[-1][18:32] + '.nc'
         save_sat_model_sample(out_file, sat_mod_dict)
