@@ -8,6 +8,7 @@ import datetime
 import glob
 import numpy as np
 
+from mylib.amf.amf import AMF_trop
 from mylib.conversion import vmr_to_molec_cm2
 from mylib.gc_io.read_nd49 import read_nd49_resample
 from mylib.pro_omi_no2_l2.io_omi_no2_l2 import read_OMI_NO2_L2
@@ -19,21 +20,29 @@ from mylib.pro_satellite.sat_model_sample import save_sat_model_sample
 # Start user parameters
 #
 
+scene_list = ['ori', 'soil_T_ori', 'surf_T_obs', 'soil_T_obs']
 
-gc_dir = '/Dedicated/jwang-data/ywang/soil_NOx/GEOS-Chem_ori/\
-runs/geosfp_2x25_tropchem_201806/ND49/'
+#gc_dir = '/Dedicated/jwang-data/ywang/soil_NOx/GEOS-Chem_ori/\
+#runs/geosfp_2x25_tropchem_201806/ND49/'
+
+gc_root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/'
+
+gc_rel_path = 'runs/geosfp_2x25_tropchem_201806/ND49/'
 
 sat_dir = '/Dedicated/jwang-data/shared_satData/OMI_NO2_L2/2018/06/'
 
-out_dir = '../data/'
+out_dir = '../data/granule/'
 
 startDate = '2018-06-28'
 endDate   = '2018-06-28'
 
 
 
+# species names
+mod_spename = 'IJ-AVG-$_NO2'
 
-mod_varname_list = ['IJ-AVG-$_NO2', 'TIME-SER_AIRDEN', \
+# all model variable names
+mod_varname_list = [mod_spename, 'TIME-SER_AIRDEN', \
         'BXHGHT-$_BXHEIGHT', 'PEDGE-$_PSURF']
 
 # mod_coord_dict
@@ -50,8 +59,16 @@ sat_varname_list = [\
         '/HDFEOS/SWATHS/ColumnAmountNO2/Data Fields/TropopausePressure'
         ]
 
+# calculate air mass factor
+amf_flag = True
 
 verbose = True
+
+flag_2D = True
+flag_1D = True
+
+# use tropopause pressure from satellite data
+tp_sat_flag = True
 
 #
 # End user parameters
@@ -76,23 +93,54 @@ while currDate_D <= endDate_D:
     nextDate_D = currDate_D + datetime.timedelta(days=1)
     preDate  = str(preDate_D)
     nextDate = str(nextDate_D)
-
-    # all model files
+    # all dates
     p_date = preDate[0:4]  + preDate[5:7]  + preDate[8:10]
     c_date = currDate[0:4] + currDate[5:7] + currDate[8:10]
     n_date = nextDate[0:4] + nextDate[5:7] + nextDate[8:10]
-    pre_files  = gc_dir + 'ts' + p_date + '.bpch'
-    curr_files = gc_dir + 'ts' + c_date + '.bpch'
-    next_files = gc_dir + 'ts' + n_date + '.bpch'
 
-    # read model data
-    model_files = [pre_files, curr_files, next_files]
-    model_data = read_nd49_resample(model_files, mod_varname_list)
+    # get filenames
+    for scene in scene_list:
 
-    print(model_data['IJ-AVG-$_NO2'].shape)
+        print(' get GC data from ' + scene)
 
-    for i in range(len(model_data['Time'])):
-        print(i, model_data['Time'][i])
+        # data directory
+        gc_dir = gc_root_dir + 'GEOS-Chem_' + scene + '/' + gc_rel_path
+
+        # filenames for previous, current, and next day.
+        pre_files  = gc_dir + 'ts' + p_date + '.bpch'
+        curr_files = gc_dir + 'ts' + c_date + '.bpch'
+        next_files = gc_dir + 'ts' + n_date + '.bpch'
+
+        # read model data
+        model_files = [pre_files, curr_files, next_files]
+        if (scene == scene_list[0]):
+            # read all model variables
+            model_data = \
+                    read_nd49_resample(model_files, mod_varname_list)
+            # add scene suffix to species name
+            model_data[mod_spename + '_' + scene] = \
+                    model_data.pop(mod_spename)
+        else:
+            # only read a species
+            model_species = \
+                    read_nd49_resample(model_files, [mod_spename])
+            # add species of a centain scene to *model_data*
+            model_data[mod_spename + '_' + scene] = \
+                    model_species.pop(mod_spename)
+                    
+    # unit conversion (ppbv => molec/cm2)
+    # at every layer
+    # and prepare model data for resmapling
+    mod_var_dict = {}
+    for scene in scene_list:
+        mod_NO2 = vmr_to_molec_cm2(model_data[mod_spename + '_' + scene],
+                model_data['TIME-SER_AIRDEN'], model_data['BXHGHT-$_BXHEIGHT'])
+        mod_var_dict['NO2_' + scene] = mod_NO2
+
+    # preprae additional data for resampling
+    mod_TAI93 = model_data['TAI93']
+    mod_var_dict['PEdge_Bot'] = model_data['PEDGE-$_PSURF']
+
 
     # find satellite files
     sat_wildcard = sat_dir + 'OMI-Aura_L2-OMNO2_' + currDate[0:4] \
@@ -105,8 +153,8 @@ while currDate_D <= endDate_D:
 
     # process satellite files
     print('Process satellites on ' + currDate)
-    #for i in range(len(all_sat_files)):
-    for i in [3]:
+    for i in range(len(all_sat_files)):
+    #for i in [3]:
 
         # read satellite file
         sat_file = all_sat_files[i]
@@ -125,35 +173,107 @@ while currDate_D <= endDate_D:
         sat_flag = QC_OMI_NO2_L2(sat_NO2_trop, sza, vza, CF, 
                 XTtrackQ, vcdQ, TerrRef)
 
-        # unit conversion (ppbv => molec/cm2)
-        # at every layer
-        mod_NO2 = vmr_to_molec_cm2(model_data['IJ-AVG-$_NO2'],
-                model_data['TIME-SER_AIRDEN'], model_data['BXHGHT-$_BXHEIGHT'])
-
-
-        # Sample model results according satellite observations
-        # and regrid satellite observations to model grids.
-        mod_TAI93 = model_data['TAI93']
-        mod_var_dict = {}
-        mod_var_dict['NO2'] = mod_NO2
-        mod_var_dict['PEdge_Bot'] = model_data['PEDGE-$_PSURF']
+        # prepare satellite data for resmapling
         sat_lat = sat_data['Latitude']
         sat_lon = sat_data['Longitude']
         sat_TAI93 = np.tile(sat_data['Time'], sat_lat.shape[1])
         sat_TAI93 = sat_TAI93.reshape(sat_lat.shape[::-1])
         sat_TAI93 = sat_TAI93.T
-        print(sat_TAI93.shape)
-        print(sat_TAI93[:,0])
-        print(sat_TAI93[1,:])
         sat_obs_dict = {}
         sat_obs_dict['ColumnAmountNO2Trop'] = sat_data['ColumnAmountNO2Trop']
         sat_obs_dict['TropopausePressure'] = sat_data['TropopausePressure']
         sat_obs_dict['AmfTrop'] = sat_data['AmfTrop']
         sat_obs_dict['ScatteringWeight'] = sat_data['ScatteringWeight']
+
+        # Sample model results according satellite observations
+        # and regrid satellite observations to model grids.
         sat_mod_dict = \
                 sat_model_sample(mod_coord_dict, mod_TAI93, mod_var_dict,
                 sat_lat, sat_lon, sat_TAI93, sat_obs_dict,
                 sat_flag=sat_flag)
+
+        if amf_flag:
+
+            # scattering weight pressure
+            SW_AK_press = sat_data['ScatteringWtPressure']
+
+            if flag_2D:
+
+                # prepare data for AMF_trop function
+                mod_grid_dict = sat_mod_dict['mod_grid_dict']
+                sat_grid_dict = sat_mod_dict['sat_grid_dict']
+                PEdge_Bot_2D = mod_grid_dict['PEdge_Bot']
+                SW_AK_2D     = sat_grid_dict['ScatteringWeight']
+                flag         = (sat_mod_dict['count'] > 0)
+
+                # use tropopause pressure from satellite
+                if tp_sat_flag:
+
+                    # prepare data for AMF_trop function
+                    ind_l_2D        = None
+                    P_tropopause_2D = sat_grid_dict['TropopausePressure']
+
+                    # loop different scenes
+                    for scene in scene_list:
+                        
+                        # prepare species from AMF_trop function
+                        layer_val_2D = mod_grid_dict['NO2_' + scene]
+
+                        print('Calculate AMF at grids for ' + scene + 
+                                ', use tropopause from satellite ')
+
+                        # calculate AMF
+                        amf_trop_data_2D_satp = AMF_trop(layer_val_2D,
+                                PEdge_Bot_2D, SW_AK_2D, SW_AK_press,
+                                ind_l_arr=ind_l_2D,
+                                P_tropopause_arr=P_tropopause_2D,
+                                var='AMF', flag=flag)
+
+                        # add data to sat_mod_dict through
+                        # mod_grid_dict and sat_grid_dict
+                        mod_grid_dict['AmfTrop_tp_sat_' + scene] = \
+                                amf_trop_data_2D_satp['AMF']
+                        mod_grid_dict['NO2Trop_' + scene] = \
+                                amf_trop_data_2D_satp['VCD']
+
+            if flag_1D:
+
+                # prepare data for AMF_trop function
+                mod_1D_dict = sat_mod_dict['mod_1D_dict']
+                sat_1D_dict = sat_mod_dict['sat_1D_dict']
+                PEdge_Bot_1D = mod_1D_dict['PEdge_Bot']
+                SW_AK_1D     = sat_1D_dict['ScatteringWeight']
+                flag         = None
+
+                # use tropopause pressure from satellite
+                if tp_sat_flag:
+
+                    # prepare data for AMF_trop function
+                    ind_l_1D        = None
+                    P_tropopause_1D = sat_1D_dict['TropopausePressure']
+
+                    # loop different scenes
+                    for scene in scene_list:
+
+                        layer_val_1D = mod_1D_dict['NO2_' + scene]
+
+                        print('Calculate AMF at stations for ' + scene + 
+                                ', use tropopause from satellite ')
+
+                        # calculate AMF
+                        amf_trop_data_1D_satp = AMF_trop(layer_val_1D,
+                                PEdge_Bot_1D, SW_AK_1D, SW_AK_press,
+                                ind_l_arr=ind_l_1D,
+                                P_tropopause_arr=P_tropopause_1D,
+                                var='AMF', flag=flag)
+
+                        # add data to sat_mod_dict through
+                        # mod_1D_dict and sat_1D_dict
+                        mod_1D_dict['AmfTrop_tp_sat_' + scene] = \
+                                amf_trop_data_1D_satp['AMF']
+                        mod_1D_dict['NO2Trop_' + scene] = \
+                                amf_trop_data_1D_satp['VCD']
+
 
         # save data
         lon, lat = np.meshgrid(model_data['longitude'], model_data['latitude'])
