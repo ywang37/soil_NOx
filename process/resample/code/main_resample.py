@@ -33,8 +33,8 @@ sat_dir = '/Dedicated/jwang-data/shared_satData/OMI_NO2_L2/2018/06/'
 
 out_dir = '../data/granule/'
 
-startDate = '2018-06-28'
-endDate   = '2018-06-28'
+startDate = '2018-06-30'
+endDate   = '2018-06-30'
 
 
 
@@ -233,8 +233,16 @@ while currDate_D <= endDate_D:
                         # mod_grid_dict and sat_grid_dict
                         mod_grid_dict['AmfTrop_tp_sat_' + scene] = \
                                 amf_trop_data_2D_satp['AMF']
-                        mod_grid_dict['NO2Trop_' + scene] = \
+                        mod_grid_dict['NO2Trop_tp_sat_' + scene] = \
                                 amf_trop_data_2D_satp['VCD']
+
+                        # convert VCD to VCD_AK and save to
+                        # mod_grid_dict
+                        mod_grid_dict['NO2Trop_AK_tp_sat_' + scene] = \
+                                mod_grid_dict['NO2Trop_tp_sat_' + scene] \
+                                * mod_grid_dict['AmfTrop_tp_sat_' + scene] \
+                                / sat_grid_dict['AmfTrop']
+
 
             if flag_1D:
 
@@ -271,8 +279,15 @@ while currDate_D <= endDate_D:
                         # mod_1D_dict and sat_1D_dict
                         mod_1D_dict['AmfTrop_tp_sat_' + scene] = \
                                 amf_trop_data_1D_satp['AMF']
-                        mod_1D_dict['NO2Trop_' + scene] = \
+                        mod_1D_dict['NO2Trop_tp_sat_' + scene] = \
                                 amf_trop_data_1D_satp['VCD']
+
+                        # convert VCD to VCD_AK and save to
+                        # mod_1D_dict
+                        mod_1D_dict['NO2Trop_AK_tp_sat_' + scene] = \
+                                mod_1D_dict['NO2Trop_tp_sat_' + scene] \
+                                * mod_1D_dict['AmfTrop_tp_sat_' + scene] \
+                                / sat_1D_dict['AmfTrop']
 
 
         # save data

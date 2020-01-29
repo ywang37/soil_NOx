@@ -39,6 +39,13 @@ cb_ticklabels_diff = ['-1.0', '-0.5', '0.0', '0.5', '1.0']
 
 lw=0.5
 
+diff_title_list = \
+        [None, \
+        scene_tup[1] + ' minus ' + scene_tup[0], \
+        scene_tup[2] + ' minus ' + scene_tup[0], \
+        scene_tup[3] + ' minus ' + scene_tup[0], \
+        ]
+
 #
 # End user parameters
 #####################
@@ -58,6 +65,7 @@ plot_panel_variables(root_dir, scene_tup, month,
         vmin_diff=vmin_diff, vmax_diff=vmax_diff, units_diff=units_diff,
         diff=True, layout=layout_2,
         lw=lw,
+        title_list=diff_title_list,
         cb_ticks=cb_ticks, cb_ticklabels=cb_ticklabels,
         cb_ticks_diff=cb_ticks_diff, cb_ticklabels_diff=cb_ticklabels_diff,
         )

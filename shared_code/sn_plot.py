@@ -30,16 +30,28 @@ def layout_2(hspace=0.2):
     """
     layout_1(hspace=hspace)
 
+def layout_3(top=0.95, bottom=0.10, 
+        left=0.06, right=0.92,
+        wspace=0.12):
+    """
+    """
+    plt.subplots_adjust(top=top, bottom=bottom, 
+            left=left, right=right,
+            wspace=wspace)
+
+
 
 def plot_panel_variables(root_dir, scene_tup, month,
         varname='EmisNO_Soil', read_func=read_nc_emissions_multifiles,
         gc_run='geosfp_2x25_tropchem', res='2x25',
+        read_func_varname='emi_dict',
         vmin=None, vmax=None, units='',
         cmap=None, cb_ticks=None, cb_ticklabels=None,
         seperate_cbar=False,
         vmin_diff=None, vmax_diff=None, units_diff='',
         cmap_diff=None, cb_ticks_diff=None, cb_ticklabels_diff=None,
         lw=None,
+        title_list=None,
         diff=False, verbose=True, layout=layout_1):
     """
     """
@@ -56,8 +68,15 @@ def plot_panel_variables(root_dir, scene_tup, month,
     ytick = [None, [], None, []]
     for i in range(len(scene_tup)):
         scene = scene_tup[i]
+        if title_list is None:
+            title=scene + '_' + varname
+        else:
+            if title_list[i] is None:
+                title=scene + '_' + varname
+            else:
+                title=title_list[i]
         ax = add_geoaxes(fig, int('22'+str(i+1)),
-                title=scene + '_' + varname,
+                title=title,
                 lw=lw,
                 xtick=xtick[i], ytick=ytick[i])
         ax_list.append(ax)
@@ -77,9 +96,9 @@ def plot_panel_variables(root_dir, scene_tup, month,
         scene = scene_tup[i]
         ax = ax_list[i]
 
-        emi = data_dict['emi_dict'][scene]
+        emi = data_dict[read_func_varname][scene]
         if ( (i >= 1) and diff ):
-            emi0 = data_dict['emi_dict'][scene_tup[0]]
+            emi0 = data_dict[read_func_varname][scene_tup[0]]
             emi_diff = emi - emi0
             flag = np.logical_and(emi0<1e-6, emi<1e-6)
             emi_diff = np.ma.masked_array(emi_diff, flag)
@@ -148,6 +167,147 @@ def plot_panel_variables(root_dir, scene_tup, month,
             cb2.set_ticks(cb_ticks)
             if cb_ticklabels is not None:
                 cb2.set_ticklabels(cb_ticklabels)
+
+def plot_compare_4_to_1(var_dict, sat_varname, 
+        mod_varname_list, sat_sim_name,
+        mod_sim_name_dict,
+        lw=None,
+        sat_cv=None,
+        soil_ratio=None,
+        cmap_VCD=None, min_VCD=None, max_VCD=None,
+        cmap_diff=None, min_diff=None, max_diff=None,
+        label_VCD='', label_diff='', label_ratio='',
+        min_ratio=None, max_ratio=None,
+        ):
+    """
+    """
+
+    ny_fig, nx_fig = 5, 3
+
+    # plot
+    fig = plt.figure(figsize=(10, 9))
+    ax_list = []
+    for i in range(ny_fig):
+        for j in range(nx_fig):
+
+            # title 
+            if i == 0:
+                if j == 0:
+                    title = sat_sim_name
+                elif j == 1:
+                    title = sat_sim_name + ' stddev/ave'
+                else:
+                    title = 'soil/total emissions'
+            else:
+                mod_sim_name = mod_sim_name_dict[mod_varname_list[i-1]]
+                if j == 0:
+                    title = mod_sim_name
+                elif j == 1:
+                    title = mod_sim_name + ' diff'
+                else:
+                    title = mod_sim_name + ' ratio'
+
+            # xtick
+            if (i == ny_fig-1):
+                xtick = None
+            else:
+                xtick = []
+
+            # ytick
+            if (j == 0):
+                ytick = None
+            else:
+                ytick = []
+
+            ax = add_geoaxes(fig, ny_fig, nx_fig, i*nx_fig+j+1,
+                    lw=lw,
+                    title=title, xtick=xtick, ytick=ytick)
+            ax_list.append(ax)
+
+    if cmap_VCD is None:
+        cmap_VCD = truncate_colormap(WhGrYlRd_map,
+                minval=0.05, maxval=1.0, n=200)
+
+    if cmap_diff is None:
+        cmap_diff = deepcopy(gbcwpry_map)
+
+    # lat_e and lon_e
+    lat_e = var_dict['Latitude_e']
+    lon_e = var_dict['Longitude_e']
+
+    cbar=False
+
+    if sat_cv is not None:
+        ax = ax_list[1]
+        sc_pout = cartopy_plot(lon_e, lat_e, sat_cv, ax=ax,
+                cmap=deepcopy(cmap_VCD), vmin=0, vmax=1, cbar=cbar)
+
+    if soil_ratio is not None:
+        ax = ax_list[2]
+        srat_pout = cartopy_plot(lon_e, lat_e, soil_ratio, ax=ax,
+                cmap=deepcopy(cmap_VCD), vmin=0, vmax=0.5, cbar=cbar)
+
+    # satellite VCD
+    sat_var = var_dict[sat_varname]
+    ax = ax_list[0]
+    cartopy_plot(lon_e, lat_e, sat_var, ax=ax, cmap=deepcopy(cmap_VCD),
+            vmin=min_VCD, vmax=max_VCD, cbar=cbar)
+
+    # model VCD, diff ratio
+    for i in range(len(mod_varname_list)):
+
+        mod_varname = mod_varname_list[i]
+
+        # VCD
+        mod_var = var_dict[mod_varname]
+        ax = ax_list[(i+1)*nx_fig]
+        pout_VCD = cartopy_plot(lon_e, lat_e, mod_var, ax=ax, 
+                cmap=deepcopy(cmap_VCD),
+                vmin=min_VCD, vmax=max_VCD, cbar=cbar)
+
+        # VCD diff
+        ax = ax_list[(i+1)*nx_fig+1]
+        diff = mod_var - sat_var
+        pout_diff = cartopy_plot(lon_e, lat_e, diff, ax=ax, 
+                cmap=deepcopy(cmap_diff),
+                vmin=min_diff, vmax=max_diff, cbar=cbar)
+
+        # VCD ratio
+        ax = ax_list[(i+1)*nx_fig+2]
+        ratio = diff / mod_var
+        pout_ratio = cartopy_plot(lon_e, lat_e, ratio, ax=ax, 
+                cmap=deepcopy(cmap_diff),
+                vmin=min_ratio, vmax=max_ratio, cbar=cbar)
+
+    h = 0.02
+
+    cv_pos = sc_pout['ax'].get_position()
+    cv_cax = fig.add_axes([cv_pos.x0, cv_pos.y0+0.08, cv_pos.width, h])
+    cv_cb = plt.colorbar(sc_pout['mesh'], cax=cv_cax, 
+            orientation='horizontal', extend='max')
+
+    srat_pout
+    srat_pos = srat_pout['ax'].get_position()
+    srat_cax = fig.add_axes([srat_pos.x0, srat_pos.y0+0.08, cv_pos.width, h])
+    srat_cb = plt.colorbar(srat_pout['mesh'], cax=srat_cax,
+            orientation='horizontal', extend='max')
+
+    # colorbar
+    pout_list = [pout_VCD, pout_diff, pout_ratio]
+    cb_label = [label_VCD, label_diff, label_ratio]
+    for j in range(len(pout_list)):
+        pout = pout_list[j]
+        pout['ax'].reset_position()
+        pos = pout['ax'].get_position()
+        cax = fig.add_axes([pos.x0, pos.y0-0.06, pos.width, h])
+        cb = plt.colorbar(pout['mesh'], cax=cax, orientation='horizontal')
+        cb.set_label(cb_label[j])
+
+    layout_3()
+
+
+
+
 
 
 
