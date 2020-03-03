@@ -36,8 +36,8 @@ sat_cv_varname = 'sat_ColumnAmountNO2Trop_cv'
 
 scene_tup = ['ori', 'soil_T_ori', 'surf_T_obs', 'soil_T_obs']
 
-AK = '_AK'
-#AK = ''
+#AK = '_AK'
+AK = ''
 
 mod_varname_str = 'mod_NO2Trop' + AK + '_tp_sat_'
 

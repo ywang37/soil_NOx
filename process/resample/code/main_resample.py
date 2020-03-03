@@ -154,7 +154,7 @@ while currDate_D <= endDate_D:
     # process satellite files
     print('Process satellites on ' + currDate)
     for i in range(len(all_sat_files)):
-    #for i in [3]:
+    #for i in [14]:
 
         # read satellite file
         sat_file = all_sat_files[i]
@@ -191,6 +191,12 @@ while currDate_D <= endDate_D:
                 sat_model_sample(mod_coord_dict, mod_TAI93, mod_var_dict,
                 sat_lat, sat_lon, sat_TAI93, sat_obs_dict,
                 sat_flag=sat_flag)
+
+        # skip if there is no satellite data that that is
+        # in the region
+        if sat_mod_dict['valid_sat'] == 0:
+            print('There is no satellite data that that is in the region.')
+            continue
 
         if amf_flag:
 
@@ -291,19 +297,21 @@ while currDate_D <= endDate_D:
 
 
         # save data
-        lon, lat = np.meshgrid(model_data['longitude'], model_data['latitude'])
-        sat_mod_dict['Latitude']  = lat
-        sat_mod_dict['Longitude'] = lon
-        lon_e, lat_e = \
-                np.meshgrid(model_data['longitude_e'], 
-                        model_data['latitude_e'])
-        sat_mod_dict['Latitude_e']   = lat_e
-        sat_mod_dict['Longitude_e']  = lon_e
-        sat_mod_dict['sat_ScatteringWtPressure'] = \
-                sat_data['ScatteringWtPressure']
-        out_file = out_dir + 'model_satellite_' + \
-                sat_file.split('/')[-1][18:32] + '.nc'
-        save_sat_model_sample(out_file, sat_mod_dict)
+        if ( sat_mod_dict['valid_sat'] > 0 ):
+            lon, lat = np.meshgrid(model_data['longitude'], 
+                    model_data['latitude'])
+            sat_mod_dict['Latitude']  = lat
+            sat_mod_dict['Longitude'] = lon
+            lon_e, lat_e = \
+                    np.meshgrid(model_data['longitude_e'], 
+                            model_data['latitude_e'])
+            sat_mod_dict['Latitude_e']   = lat_e
+            sat_mod_dict['Longitude_e']  = lon_e
+            sat_mod_dict['sat_ScatteringWtPressure'] = \
+                    sat_data['ScatteringWtPressure']
+            out_file = out_dir + 'model_satellite_' + \
+                    sat_file.split('/')[-1][18:32] + '.nc'
+            save_sat_model_sample(out_file, sat_mod_dict)
 
 
     # go to next day
