@@ -14,8 +14,9 @@ res = 'GEOS_2x2.5'
 
 model = 'GEOS_FP'
 
-yyyymm_list = ['201805','201806', \
-        '201807', '201808']
+yyyymm_list = ['201605','201606', \
+        '201607', '201608', '201609']
+#yyyymm_list = ['201809']
 
 #
 # End user parameters

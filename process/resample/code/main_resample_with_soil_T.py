@@ -10,6 +10,7 @@ import numpy as np
 
 from mylib.amf.amf import AMF_trop
 from mylib.conversion import vmr_to_molec_cm2
+from mylib.gc_io.met import get_geosfp_hourly_A1_3days
 from mylib.gc_io.read_nd49 import read_nd49_resample
 from mylib.pro_omi_no2_l2.io_omi_no2_l2 import read_OMI_NO2_L2
 from mylib.pro_omi_no2_l2.pro_omi_no2_l2 import QC_OMI_NO2_L2
@@ -20,22 +21,26 @@ from mylib.pro_satellite.sat_model_sample import save_sat_model_sample
 # Start user parameters
 #
 
-scene_list = ['ori', 'soil_T_ori', 'surf_T_obs', 'soil_T_obs']
+startDate = '2018-08-31'
+endDate   = '2018-08-31'
 
-#gc_dir = '/Dedicated/jwang-data/ywang/soil_NOx/GEOS-Chem_ori/\
-#runs/geosfp_2x25_tropchem_201806/ND49/'
+yyyy = startDate[0:4]
+mm   = startDate[5:7]
+yyyymm = yyyy + mm
+
+scene_list = ['ori', 'soil_T_ori', 'surf_T_obs', 'soil_T_obs']
 
 gc_root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/'
 
-gc_rel_path = 'runs/geosfp_2x25_tropchem_201806/ND49/'
+gc_rel_path = 'runs/geosfp_2x25_tropchem_' + yyyymm  + '/ND49/'
 
-sat_dir = '/Dedicated/jwang-data/shared_satData/OMI_NO2_L2/2018/06/'
+sat_dir = '/Dedicated/jwang-data/shared_satData/OMI_NO2_L2/' + \
+        yyyy + '/' + mm + '/'
+
+met_root_dir = '/Dedicated/jwang-data/GCDATA/GEOS_2x2.5/GEOS_FP_soil_T/'
+get_geosfp_A1 = get_geosfp_hourly_A1_3days
 
 out_dir = '../data/granule/'
-
-startDate = '2018-06-30'
-endDate   = '2018-06-30'
-
 
 
 # species names
@@ -58,6 +63,9 @@ mod_coord_dict['mod_lon_step']  =    2.5
 sat_varname_list = [\
         '/HDFEOS/SWATHS/ColumnAmountNO2/Data Fields/TropopausePressure'
         ]
+
+# soil temperature
+soil_T_flag = True
 
 # calculate air mass factor
 amf_flag = True
@@ -99,6 +107,18 @@ while currDate_D <= endDate_D:
     n_date = nextDate[0:4] + nextDate[5:7] + nextDate[8:10]
 
     mod_var_dict = {}
+
+    # soil temperature
+    if soil_T_flag:
+        no_pre  = False
+        no_next = False
+        if preDate[5:7] != currDate[5:7]:
+            no_pre = True
+        if nextDate[5:7] != currDate[5:7]:
+            no_next = True
+        soil_T = get_geosfp_A1(met_root_dir, c_date, ['TSOIL1'],
+                no_pre=no_pre, no_next=no_next, verbose=verbose)
+        mod_var_dict['TSOIL1'] = soil_T['TSOIL1']
 
     # get filenames
     for scene in scene_list:
