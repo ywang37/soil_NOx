@@ -7,10 +7,11 @@ Created on January 13, 2020
 import datetime
 import glob
 import numpy as np
+import sys
 
 from mylib.amf.amf import AMF_trop
 from mylib.conversion import vmr_to_molec_cm2
-from mylib.gc_io.met import get_geosfp_hourly_A1_3days
+from mylib.gc_io.met import get_geosfp_hourly_A1_3days, get_geosfp_hourly_A1_3days_direct
 from mylib.gc_io.read_nd49 import read_nd49_resample
 from mylib.pro_omi_no2_l2.io_omi_no2_l2 import read_OMI_NO2_L2
 from mylib.pro_omi_no2_l2.pro_omi_no2_l2 import QC_OMI_NO2_L2
@@ -21,8 +22,16 @@ from mylib.pro_satellite.sat_model_sample import save_sat_model_sample
 # Start user parameters
 #
 
-startDate = '2018-08-31'
-endDate   = '2018-08-31'
+# usage:
+# main_resample_with_soil_T.py startDate endDate
+# startDate and endDate formats are like YYYY-MM-DD
+# startDate and endDate must be in the same month
+
+startDate = sys.argv[1]
+endDate   = sys.argv[2]
+
+#startDate = '2018-07-16'
+#endDate   = '2018-07-16'
 
 yyyy = startDate[0:4]
 mm   = startDate[5:7]
@@ -39,8 +48,9 @@ sat_dir = '/Dedicated/jwang-data/shared_satData/OMI_NO2_L2/' + \
 
 met_root_dir = '/Dedicated/jwang-data/GCDATA/GEOS_2x2.5/GEOS_FP_soil_T/'
 get_geosfp_A1 = get_geosfp_hourly_A1_3days
+get_geosfp_A1_hh_lag = get_geosfp_hourly_A1_3days_direct
 
-out_dir = '../data/granule/'
+out_dir = '/Dedicated/jwang-data/ywang/soil_NOx/process/resample/data/granule/'
 
 
 # species names
@@ -66,6 +76,9 @@ sat_varname_list = [\
 
 # soil temperature
 soil_T_flag = True
+
+# soil temperature half hour lag
+soil_T_hh_lag_flag = True
 
 # calculate air mass factor
 amf_flag = True
@@ -119,6 +132,13 @@ while currDate_D <= endDate_D:
         soil_T = get_geosfp_A1(met_root_dir, c_date, ['TSOIL1'],
                 no_pre=no_pre, no_next=no_next, verbose=verbose)
         mod_var_dict['TSOIL1'] = soil_T['TSOIL1']
+
+    # soil temperature half hour lag
+    if soil_T_hh_lag_flag:
+        soil_T_hh_lag = get_geosfp_A1_hh_lag(met_root_dir, c_date, ['TSOIL1'],
+                verbose=verbose)
+        mod_var_dict['TSOIL1_hh_lag'] = soil_T_hh_lag['TSOIL1']
+
 
     # get filenames
     for scene in scene_list:

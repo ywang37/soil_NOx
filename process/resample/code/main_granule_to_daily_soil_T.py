@@ -27,8 +27,8 @@ granule_dir = '../data/granule/'
 
 daily_dir = '../data/daily/'
 
-startDate = '2018-06-30'
-endDate   = '2018-06-30'
+startDate = '2019-06-01'
+endDate   = '2019-08-31'
 
 # model species name
 mod_spe_name = 'mod_NO2Trop'
@@ -46,6 +46,7 @@ varname_list = [ \
         'sat_ColumnAmountNO2Trop', \
         'sat_TropopausePressure', \
         'mod_TSOIL1', \
+        'mod_TSOIL1_hh_lag', \
         ]
 
 coord_name_list = [ 
