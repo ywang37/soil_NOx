@@ -17,14 +17,18 @@ from sn_plot import plot_compare_4_to_1
 # Start user parameters
 #
 
-file_str = 'model_satellite_2018-06-01_2018-06-30'
+# usage:
+# python main_plot_NO2_VCD.py file_str month
+
+file_str = sys.argv[1]
+month    = sys.argv[2]
+#file_str = 'model_satellite_2018-06-01_2018-06-30'
+#month = '201806'
 
 NO2_VCD_dir = '/Dedicated/jwang-data/ywang/soil_NOx/process/\
 resample/data/monthly/'
 
 emi_root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/'
-
-month = '201806'
 
 emi_ratio_name = 'EmisNO_Soil'
 

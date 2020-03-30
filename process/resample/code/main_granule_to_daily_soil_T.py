@@ -27,8 +27,8 @@ granule_dir = '../data/granule/'
 
 daily_dir = '../data/daily/'
 
-startDate = '2019-06-01'
-endDate   = '2019-08-31'
+startDate = '2016-06-01'
+endDate   = '2016-08-31'
 
 # model species name
 mod_spe_name = 'mod_NO2Trop'
@@ -91,6 +91,11 @@ while currDate_D <= endDate_D:
             + 'm' + currDate[5:7] + currDate[8:10] + 't*.nc'
     all_files = glob.glob(wildcard)
     all_files.sort()
+    if len(all_files) == 0:
+        print('  No files')
+        # go to next day
+        currDate_D = currDate_D + datetime.timedelta(days=1)
+        continue
 
     # read  data
     in_data_list = []

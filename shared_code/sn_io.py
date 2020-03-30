@@ -92,7 +92,43 @@ def get_nc_NO_emi_ratio_multifiles(root_dir, scene_tup, month,
 
     return out_dict
 
+def read_VCD_multiscenes(filename, scene_tup, mod_scene_var_list=[], 
+        sat_var_list=[], mod_var_list=[], latlon=True, verbose=True):
+    """
+    """
 
+    # all variable names
+    varname_list = []
+
+    # mod_scene_var_list
+    for i in range(len(scene_tup)):
+
+        scene = scene_tup[i]
+
+        for j in range(len(mod_scene_var_list)):
+
+            mod_scene_var = mod_scene_var_list[j]
+
+            varname_list.append(mod_scene_var + scene)
+
+    # sat_var_list
+    varname_list.extend(sat_var_list)
+
+    # mod_var_list
+    varname_list.extend(mod_var_list)
+
+    # latlon
+    if latlon:
+        varname_list.extend(['Latitude', 'Longitude', 
+            'Latitude_e', 'Longitude_e'])
+
+    # get all varilables
+    out_dict = read_nc(filename, varname_list, verbose=verbose)
+
+    return out_dict
+#
+#------------------------------------------------------------------------------
+#
 def save_ave(filename, data_dict, verbose=True):
     """ save avarage data
     """

@@ -4,6 +4,7 @@ Created on January 2, 2020
 @author: Yi Wang
 """
 
+import cartopy.feature as cfeature
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,6 +16,8 @@ from mylib.cartopy_plot import cartopy_plot
 from mylib.colormap.colormap_utility import truncate_colormap
 from mylib.colormap.gbcwpry_map import gbcwpry_map
 from mylib.colormap.WhGrYlRd_map import WhGrYlRd_map
+from mylib.layout import multiFigure, h_2_ax, panel_tick_label
+from mylib.layout import right_center_label
 
 def layout_1(left=0.08, right=0.97,
         top=0.95, bottom=0.15,
@@ -305,10 +308,129 @@ def plot_compare_4_to_1(var_dict, sat_varname,
 
     layout_3()
 
+def plot_two_month_diff(mon1_dict, mon2_dict, sat_varname, 
+        mod_varname, scene_tup,
+        vmin=None, vmax=None,
+        diff_min=None, diff_max=None,
+        left=0.05, right=0.98, top=0.95, bottom=0.1,
+        wspace=0.05, hspace=0.05,
+        y_off2=-0.03, y_off3=-0.06,
+        xticks=np.arange(-180.0, 180.1, 20.0),
+        yticks=np.arange(-90.0, 90.1, 10.0),
+        region_limit=[-90.0, -180.0, 90.0, 180.0]):
+    """ mon2 - mon1
+    """
 
 
+    nrow = 3
+    ncol = 5
+    figsize=(13, 8)
+    projPos = list(range(nrow * ncol))
+    layout_dict = multiFigure(nrow, ncol,
+            left=left, right=right, top=top, bottom=bottom,
+            wspace=wspace, hspace=hspace,
+            figsize=figsize, projPos=projPos)
+    fig  = layout_dict['fig']
+    axes = layout_dict['axes']
 
+    lat_e = mon1_dict['Latitude_e']
+    lon_e = mon1_dict['Longitude_e']
 
+    pout1_list = []
+    pout2_list = []
+    pout3_list = []
+    for j in range(ncol):
+       
+        # satellite 
+        if j == 0:
+
+            data1 = mon1_dict[sat_varname]
+            data2 = mon2_dict[sat_varname]
+            title = 'OMI'
+
+        # model
+        else:
+
+            data1 = mon1_dict[mod_varname+scene_tup[j-1]]
+            data2 = mon2_dict[mod_varname+scene_tup[j-1]]
+            title = scene_tup[j-1]
+
+        diff = data2 - data1
+
+        # plot
+
+        # month 1
+        ax = axes[j]
+        ax.set_title(title)
+        pout = cartopy_plot(lon_e, lat_e, data1, ax=ax, vmin=vmin, vmax=vmax,
+                cmap=deepcopy(WhGrYlRd_map), cbar=False)
+        pout1_list.append(pout)
+
+        # month 2
+        ax = axes[ncol+j]
+        pout = cartopy_plot(lon_e, lat_e, data2, ax=ax, vmin=vmin, vmax=vmax,
+                cmap=deepcopy(WhGrYlRd_map), cbar=False)
+        pout2_list.append(pout)
+
+        # month2 - month1
+        ax = axes[ncol*2+j]
+        pout = cartopy_plot(lon_e, lat_e, diff, ax=ax, 
+                cmap=plt.get_cmap('seismic'), cbar=False,
+                vmin=diff_min, vmax=diff_max)
+        pout3_list.append(pout)
+
+    states_provinces = cfeature.NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
+
+    # ticks
+    panel_tick_label(axes, ncol, xticks=xticks, yticks=yticks)
+
+    # set limit
+    for ax in axes:
+        ax.add_feature(cfeature.BORDERS)
+        ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+        ax.add_feature(cfeature.COASTLINE, zorder=200)
+        #ax.add_feature(cfeature.OCEAN, color='w', zorder=100)
+        ax.set_xlim((region_limit[1],region_limit[3]))
+        ax.set_ylim((region_limit[0],region_limit[2]))
+
+    # VCD colorbar
+    cax2 = h_2_ax(fig, pout2_list[1]['ax'], pout2_list[3]['ax'],
+            y_off=y_off2)
+    cb2 = plt.colorbar(pout2_list[1]['mesh'], cax=cax2, \
+            orientation='horizontal')
+    right_center_label(cax2, r'[molec cm$^{-2}$]')
+
+    # diff colorbar
+    cax3 = h_2_ax(fig, pout3_list[1]['ax'], pout3_list[3]['ax'],
+            y_off=y_off3)
+    cb3 = plt.colorbar(pout3_list[1]['mesh'], cax=cax3, \
+            orientation='horizontal')
+    right_center_label(cax3, r'[molec cm$^{-2}$]')
+#
+#------------------------------------------------------------------------------
+#
+def plot_NO2_T(data_dict, sat_varname, mod_varname, 
+        scene_tup, T_name,
+        left=0.1, right=0.95, top=0.9, bottom=0.15,
+        wspace=0.4, hspace=0.4,
+        ):
+    """
+    """
+
+    nrow = 2
+    ncol = 3
+    figsize = (9, 6)
+    projPos = [3]
+    layout_dict = multiFigure(nrow, ncol,
+            left=left, right=right, top=top, bottom=bottom,
+            wspace=wspace, hspace=hspace,
+            figsize=figsize, projPos=projPos)
+    fig  = layout_dict['fig']
+    axes = layout_dict['axes']
 
 
 
