@@ -8,6 +8,7 @@ import cartopy.feature as cfeature
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import pearsonr
 
 from sn_io import read_nc_emissions_multifiles
 
@@ -16,8 +17,9 @@ from mylib.cartopy_plot import cartopy_plot
 from mylib.colormap.colormap_utility import truncate_colormap
 from mylib.colormap.gbcwpry_map import gbcwpry_map
 from mylib.colormap.WhGrYlRd_map import WhGrYlRd_map
-from mylib.layout import multiFigure, h_2_ax, panel_tick_label
+from mylib.layout import multiFigure, h_1_ax, h_2_ax, panel_tick_label
 from mylib.layout import right_center_label
+from mylib.scatter_plot import scatter
 
 def layout_1(left=0.08, right=0.97,
         top=0.95, bottom=0.15,
@@ -118,6 +120,11 @@ def plot_panel_variables(root_dir, scene_tup, month,
 
     # layout
     layout()
+
+    for ax in ax_list:
+        ax.add_feature(cfeature.BORDERS)
+        #ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+        #ax.add_feature(cfeature.OCEAN, color='w', zorder=100)
 
     # colorbar axes parameter
     h = 0.03
@@ -413,12 +420,13 @@ def plot_two_month_diff(mon1_dict, mon2_dict, sat_varname,
 #
 #------------------------------------------------------------------------------
 #
-def plot_NO2_T(data_dict, sat_varname, mod_varname, 
-        scene_tup, T_name,
+def plot_NO2_T_scatter(data_dict, sat_varname, mod_varname, 
+        scene_tup, T_name, T_thre = 20.0,
         left=0.1, right=0.95, top=0.9, bottom=0.15,
         wspace=0.4, hspace=0.4,
         ):
     """
+    (ywang, 03/31/20)
     """
 
     nrow = 2
@@ -432,11 +440,531 @@ def plot_NO2_T(data_dict, sat_varname, mod_varname,
     fig  = layout_dict['fig']
     axes = layout_dict['axes']
 
+    lat_e = data_dict['Latitude_e']
+    lon_e = data_dict['Longitude_e']
+
+#    print(data_dict[T_name]-293.15)
+#    print(data_dict[T_name].shape)
+#    print(lon_e.shape)
+#    exit()
+
+    # dict index for scatter plot
+    mod_dict = {1:0, 2:1, 4:2, 5:3}
+
+    T = data_dict[T_name] - 273.15
+    flag = T >= T_thre
+    #flag = np.logical_and(T<30)
+    #flag = T < 30
+    x = deepcopy(data_dict[sat_varname])
+    x = x[flag]
+    for i in [0,1,2,4,5]:
+
+        # satellite
+        if i == 0:
+
+            y = data_dict[sat_varname]
+
+        # model
+        else:
+
+            y = data_dict[mod_varname+scene_tup[mod_dict[i]]]
+
+        y = y[flag]
+        ax = axes[i]
+        scatter(ax, x, y)
+
+    # plot satellite NO2
+    sat_data = deepcopy(data_dict[sat_varname])
+    sat_data_ave = np.nanmean(sat_data, axis=0)
+    ax = axes[3]
+    pout = cartopy_plot(lon_e, lat_e, sat_data_ave, ax=ax, 
+            vmin=None, vmax=None,
+            cmap=deepcopy(WhGrYlRd_map), cbar=False)
+
+    states_provinces = cfeature.NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
+
+    # set limit
+    ax.add_feature(cfeature.BORDERS)
+    ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+    ax.add_feature(cfeature.COASTLINE, zorder=200)
+    ax.set_xlim([lon_e[0,0],lon_e[0,-1]])
+    ax.set_ylim([lat_e[0,0],lat_e[-1,0]])
+
+    # colorbar
+    cax = h_1_ax(fig, pout['ax'])
+    cb = plt.colorbar(pout['mesh'], cax=cax, \
+            orientation='horizontal')
+
+#
+#------------------------------------------------------------------------------
+#
+def plot_NO2_CV_emi_ratio(data_dict, sat_varname='sat_ColumnAmountNO2Trop',
+        emi_dict=None,
+        left=0.1, right=0.95, top=0.9, bottom=0.2,
+        wspace=0.2, hspace=0.5,
+        NO2_VCD_unit=r'[molec cm$^{-2}$]',
+        y_off1=-0.03,
+        xticks=np.arange(-180.0, 180.1, 10.0),
+        yticks=np.arange(-90.0, 90.1, 5.0),
+        ):
+    """
+    (ywang 03/31/20)
+    """
+
+    nrow = 2
+    ncol = 2
+    figsize = (8, 6)
+    projPos = [0, 1, 2, 3]
+    layout_dict = multiFigure(nrow, ncol,
+            left=left, right=right, top=top, bottom=bottom,
+            wspace=wspace, hspace=hspace,
+            figsize=figsize, projPos=projPos)
+    fig  = layout_dict['fig']
+    axes = layout_dict['axes']
+
+    lat_e = data_dict['Latitude_e']
+    lon_e = data_dict['Longitude_e']
+
+    # ave
+    ave_pout = cartopy_plot(lon_e, lat_e, data_dict[sat_varname + '_ave'], 
+            ax=axes[0], vmin=0.0, vmax=None,
+            cmap=deepcopy(WhGrYlRd_map), cbar=False)
+    axes[0].set_title('ave')
+
+    # std
+    std_pout = cartopy_plot(lon_e, lat_e, data_dict[sat_varname + '_std'],
+            ax=axes[1], vmin=0.0, vmax=None,
+            cmap=deepcopy(WhGrYlRd_map), cbar=False)
+    axes[1].set_title('std')
+
+    # cv
+    cv_pout = cartopy_plot(lon_e, lat_e, data_dict[sat_varname + '_cv'],
+            ax=axes[2], vmin=0.0, vmax=1.0,
+            cmap=deepcopy(WhGrYlRd_map), cbar=False)
+    axes[2].set_title('cv')
+
+    # emi ratio
+    if emi_dict is not None:
+        emi_r_pout = cartopy_plot(emi_dict['lon_e'], emi_dict['lat_e'],
+                emi_dict['emi_ratio'], 
+                ax=axes[3], vmin=0, vmax=1.0,
+                cmap=deepcopy(WhGrYlRd_map), cbar=False)
+        axes[3].set_title(emi_dict.get('title', ''))
+
+    # ticks
+    panel_tick_label(axes, ncol, xticks=xticks, yticks=yticks)
+
+    states_provinces = cfeature.NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
+
+    # set limit
+    for ax in axes:
+        ax.add_feature(cfeature.BORDERS)
+        ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+        ax.add_feature(cfeature.COASTLINE, zorder=200)
+        ax.set_xlim([lon_e[0,0],lon_e[0,-1]])
+        ax.set_ylim([lat_e[0,0],lat_e[-1,0]])
+
+
+    # colorbar
+    ave_cax = h_1_ax(fig, ave_pout['ax'], y_off=y_off1)
+    ave_cb = plt.colorbar(ave_pout['mesh'], cax=ave_cax, \
+            orientation='horizontal')
+    ave_cb.set_label(NO2_VCD_unit)
+    std_cax = h_1_ax(fig, std_pout['ax'], y_off=y_off1)
+    std_cb = plt.colorbar(std_pout['mesh'], cax=std_cax, \
+            orientation='horizontal')
+    std_cb.set_label(NO2_VCD_unit)
+    cv_cax = h_1_ax(fig, cv_pout['ax'])
+    cv_cb = plt.colorbar(cv_pout['mesh'], cax=cv_cax, \
+            orientation='horizontal')
+    if emi_dict is not None:
+        emi_r_cax = h_1_ax(fig, emi_r_pout['ax'])
+        emi_r_cb = plt.colorbar(emi_r_pout['mesh'], cax=emi_r_cax, \
+                orientation='horizontal')
+
+#
+#------------------------------------------------------------------------------
+#
+def plot_NO2_T_series(data_dict, sat_varname, mod_varname, 
+        scene_tup, T_name, T_thre = 20.0,
+        left=0.1, right=0.95, top=0.9, bottom=0.15,
+        wspace=0.4, hspace=0.4,
+        ):
+    """
+    (ywang, 03/31/20)
+    """
+
+    nrow = 2
+    ncol = 1
+    figsize = (8, 8)
+    projPos = [0]
+    layout_dict = multiFigure(nrow, ncol,
+            left=left, right=right, top=top, bottom=bottom,
+            wspace=wspace, hspace=hspace,
+            figsize=figsize, projPos=projPos)
+    fig  = layout_dict['fig']
+    axes = layout_dict['axes']
+
+    lat_e = data_dict['Latitude_e']
+    lon_e = data_dict['Longitude_e']
+
+
+    T = data_dict[T_name] - 273.15
+    flag = T >= T_thre
+    T[np.logical_not(flag)] = np.nan
+    T_series = np.nanmean(T, axis=(1,2))
+
+
+    data_list = []
+
+    # satellite data
+    data_list.append(deepcopy(data_dict[sat_varname]))
+
+    # model data
+    for i in range(len(scene_tup)):
+        data_list.append(deepcopy(data_dict[mod_varname+scene_tup[i]]))
+
+    # 
+    for i in range(len(data_list)):
+        data_list[i][np.logical_not(flag)] = np.nan
+
+
+    # plot satellite NO2
+    sat_data_ave = np.nanmean(data_list[0], axis=0)
+    ax = axes[0]
+    pout = cartopy_plot(lon_e, lat_e, sat_data_ave, ax=ax, 
+            vmin=None, vmax=None,
+            cmap=deepcopy(WhGrYlRd_map), cbar=False)
+
+    states_provinces = cfeature.NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
+
+    # set limit
+    ax.add_feature(cfeature.BORDERS)
+    ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+    ax.add_feature(cfeature.COASTLINE, zorder=200)
+    ax.set_xlim([lon_e[0,0],lon_e[0,-1]])
+    ax.set_ylim([lat_e[0,0],lat_e[-1,0]])
+
+    # colorbar
+    cax = h_1_ax(fig, pout['ax'])
+    cb = plt.colorbar(pout['mesh'], cax=cax, \
+            orientation='horizontal')
+
+    # time series
+    ax = axes[1]
+    for i in range(len(data_list)):
+        ax.plot(np.nanmean(data_list[i], axis=(1,2)))
+    ax_t = ax.twinx()
+    ax_t.plot(T_series, 'k')
+
+#
+#------------------------------------------------------------------------------
+#
+def plot_NO2_VS_T(data_dict, sat_varname, mod_varname, 
+        scene_tup, T_name,
+        emi_ratio=None, emi_ratio_thre=None,
+        xticks=np.arange(-180.0, 180.1, 10),
+        yticks=np.arange(-90.0, 90.1, 5),
+        T_edge = [20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0],
+        left=0.1, right=0.95, top=0.9, bottom=0.1,
+        wspace=0.4, hspace=0.4,
+        ):
+    """
+    (ywang, 03/31/20)
+    """
+
+    nrow = 2
+    ncol = 2
+    figsize = (8, 8)
+    projPos = [0]
+    layout_dict = multiFigure(nrow, ncol,
+            left=left, right=right, top=top, bottom=bottom,
+            wspace=wspace, hspace=hspace,
+            figsize=figsize, projPos=projPos)
+    fig  = layout_dict['fig']
+    axes = layout_dict['axes']
+
+    lat_e = data_dict['Latitude_e']
+    lon_e = data_dict['Longitude_e']
+
+    T_edge = np.linspace(20, 50, 16)
+
+
+    # soil temperature
+    T = data_dict[T_name] - 273.15
+
+    data_list = []
+
+    # satellite data
+    data_list.append(deepcopy(data_dict[sat_varname]))
+
+    # model data
+    for i in range(len(scene_tup)):
+        data_list.append(deepcopy(data_dict[mod_varname+scene_tup[i]]))
+
+    # filter
+    if (emi_ratio is not None) and (emi_ratio_thre is not None):
+        ratio_flag = emi_ratio > emi_ratio_thre
+        for i in range(len(data_list)):
+            data_list[i][:,np.logical_not(ratio_flag)] = np.nan
+
+    # plot satellite NO2
+    sat_data_ave = np.nanmean(data_list[0], axis=0)
+    ax = axes[0]
+    ax.set_title(r'OMI NO$_2$ VCD')
+    pout = cartopy_plot(lon_e, lat_e, sat_data_ave, ax=ax, 
+            vmin=0, vmax=None,
+            cmap=deepcopy(WhGrYlRd_map), cbar=False)
+
+    states_provinces = cfeature.NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
+
+    # latitude and longitude
+    panel_tick_label([axes[0]], 1, xticks=xticks, yticks=yticks)
+
+    # set limit
+    ax.add_feature(cfeature.BORDERS)
+    ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+    ax.add_feature(cfeature.COASTLINE, zorder=200)
+    ax.set_xlim([lon_e[0,0],lon_e[0,-1]])
+    ax.set_ylim([lat_e[0,0],lat_e[-1,0]])
+
+    # colorbar
+    cax = h_1_ax(fig, pout['ax'])
+    cb = plt.colorbar(pout['mesh'], cax=cax, \
+            orientation='horizontal')
+    right_center_label(cax, r'[molec cm$^{-2}$]')
+
+
+    # T_dict
+    T_dict = {}
+    T_dict['data'] = []
+    T_dict['ave'] = []
+
+    # NO2_list_dict
+    NO2_list_dict = []
+    for i in range(len(data_list)):
+        NO2_list_dict.append( {} )
+
+    flag1 = np.logical_and(T>T_edge[0], T<=T_edge[-1])
+    for i in range(len(NO2_list_dict)):
+
+        NO2_list_dict[i]['data'] = []
+        NO2_list_dict[i]['ave']  = []
+        NO2_list_dict[i]['all_ave'] = np.nanmean(data_list[i])
+
+        # data in the temperature range
+        NO2_list_dict[i]['t_range_data'] = data_list[i][flag1]
+
+    # R
+    corr_t_range = []
+    flag2 = np.logical_not( np.isnan(NO2_list_dict[0]['t_range_data'] ) )
+    for i in range(len(NO2_list_dict)):
+        tmp2 = pearsonr(NO2_list_dict[i]['t_range_data'][flag2], 
+                        NO2_list_dict[0]['t_range_data'][flag2])
+        corr_t_range.append( tmp2 )
 
 
 
+    for i in range(len(T_edge)-1):
+
+        flag = np.logical_and(T>T_edge[i], T<=T_edge[i+1])
+
+        # soil temperature
+        T_dict['data'].append(T[flag])
+        T_dict['ave'].append(np.nanmean(T[flag]))
+
+        # NO2
+        for j in range(len(data_list)):
+            NO2_list_dict[j]['data'].append(data_list[j][flag])
+            NO2_list_dict[j]['ave'].append(np.nanmean(data_list[j][flag]))
 
 
+    
+    for i in range(len(data_list)):
+
+        NO2_list_dict[i]['ave'] = np.array(NO2_list_dict[i]['ave'])
+
+        # diff normal
+        diff = NO2_list_dict[i]['all_ave'] - NO2_list_dict[0]['all_ave']
+        NO2_list_dict[i]['ave_diff_nor'] = \
+                NO2_list_dict[i]['ave'] - diff
+
+        # ratio normal
+        ratio = NO2_list_dict[i]['all_ave'] / NO2_list_dict[0]['all_ave']
+        NO2_list_dict[i]['ave_ratio_nor'] = \
+                NO2_list_dict[i]['ave'] / ratio
+        
+
+
+    labels = ['OMI', 'Control', 'Soil_T', 'Obs', 'Soil_T_obs']
+
+    xlabel = u'Soil temperature [\u00B0C]'
+    ylabel = r'NO$_2$ VCD [molec cm$^{-2}$]'
+
+    flag = np.logical_not( np.isnan( NO2_list_dict[0]['ave'] ) )
+#    print(flag)
+#    print(type(flag))
+#    print(NO2_list_dict[0]['ave'])
+#    print(type(NO2_list_dict[0]['ave']))
+#    exit()
+
+    # NO2 VS T
+    ax = axes[1]
+    corr_no_nor = []
+    for i in range(len(NO2_list_dict)):
+        zorder = 10 - i
+        corr_tmp = pearsonr(NO2_list_dict[i]['ave'][flag],
+                NO2_list_dict[0]['ave'][flag])
+        if i == 0:
+            label = labels[i]
+        else:
+            label = labels[i] + '({:.2f})'.format(corr_tmp[0])
+        ax.plot(T_dict['ave'], NO2_list_dict[i]['ave'],
+                marker='o', label=label, zorder=zorder)
+        corr_no_nor.append(corr_tmp )
+    ax.legend(loc='best')
+    ax.set_title('No normalization')
+    print('--- No normalization ---')
+    for i in range(len(labels)):
+        print(labels[i], corr_no_nor[i])
+
+
+    # NO2 VS T (diff normal)
+    ax = axes[2]
+    corr_diff_nor = []
+    for i in range(len(NO2_list_dict)):
+        zorder = 10 - i
+        ax.plot(T_dict['ave'], NO2_list_dict[i]['ave_diff_nor'],
+                marker='o', label=labels[i], zorder=zorder)
+        corr_diff_nor.append( pearsonr(NO2_list_dict[i]['ave_diff_nor'][flag],
+                                      NO2_list_dict[0]['ave_diff_nor'][flag]) )      
+    ax.set_title('Difference normalization')
+    print('--- Diff normalization ---')
+    for i in range(len(labels)):
+        print(labels[i], corr_diff_nor[i])
+
+    # NO2 VS T (ratio normal)
+    ax = axes[3]
+    corr_ratio_nor = []
+    for i in range(len(NO2_list_dict)):
+        zorder = 10 - i
+        ax.plot(T_dict['ave'], NO2_list_dict[i]['ave_ratio_nor'],
+                marker='o', label=labels[i], zorder=zorder)
+        corr_ratio_nor.append(pearsonr(NO2_list_dict[i]['ave_ratio_nor'][flag],
+                                      NO2_list_dict[0]['ave_ratio_nor'][flag]) )
+    ax.set_title('Ratio normalization')
+    print('--- Ratio normalization ---')
+#    for i in range(len(labels)):
+#        print(labels[i], corr_ratio_nor[i])
+#        if i > 0:
+#            x = 0.05
+#            y = 0.9 - i*0.05
+#            ax.text(x, y, str(round(corr_ratio_nor[i][0],2)), 
+#                    color='C'+str(i), transform=ax.transAxes)
+
+    print('--- corr_t_range ---')
+    for i in range(len(labels)):
+        print(labels[i], corr_t_range[i])
+
+    for i in range(1, len(axes)):
+        axes[i].set_xlabel(xlabel)
+        axes[i].set_ylabel(ylabel)
+
+#
+#------------------------------------------------------------------------------
+#
+def plot_NO2_CV_emi_ratio(data_dict, 
+        left=0.1, right=0.95, top=0.9, bottom=0.2,
+        wspace=0.2, hspace=0.5,
+        NO2_VCD_unit=r'[molec cm$^{-2}$]',
+        y_off1=-0.03,
+        xticks=np.arange(-180.0, 180.1, 60.0),
+        yticks=np.arange(-90.0, 90.1, 3.0),
+        ):
+    """
+    (ywang 03/31/20)
+    """
+
+    nrow = 3
+    ncol = 1
+    figsize = (4, 7)
+    projPos = [0, 1, 2]
+    layout_dict = multiFigure(nrow, ncol,
+            left=left, right=right, top=top, bottom=bottom,
+            wspace=wspace, hspace=hspace,
+            figsize=figsize, projPos=projPos)
+    fig  = layout_dict['fig']
+    axes = layout_dict['axes']
+
+    lat_e = data_dict['Latitude_e']
+    lon_e = data_dict['Longitude_e']
+
+    # totol
+    total_pout = cartopy_plot(lon_e, lat_e, data_dict['total'], 
+            ax=axes[0], vmin=0.0, vmax=None,
+            cmap=deepcopy(WhGrYlRd_map), cbar=False)
+    axes[0].set_title('Total')
+
+    # soil
+    soil_pout = cartopy_plot(lon_e, lat_e, data_dict['soil'],
+            ax=axes[1], vmin=0.0, vmax=None,
+            cmap=deepcopy(WhGrYlRd_map), cbar=False)
+    axes[1].set_title('Soil')
+
+    # ratio
+    ratio_pout = cartopy_plot(lon_e, lat_e, data_dict['ratio'],
+            ax=axes[2], vmin=0.0, vmax=1.0,
+            cmap=deepcopy(WhGrYlRd_map), cbar=False)
+    axes[2].set_title('Soil / Total')
+
+    # ticks
+    panel_tick_label(axes, ncol, xticks=xticks, yticks=yticks)
+
+    states_provinces = cfeature.NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
+
+    # set limit
+    for ax in axes:
+        ax.add_feature(cfeature.BORDERS)
+        ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+        ax.add_feature(cfeature.COASTLINE, zorder=200)
+        ax.set_xlim([lon_e[0,0],lon_e[0,-1]])
+        ax.set_ylim([lat_e[0,0],lat_e[-1,0]])
+
+
+    # colorbar
+    total_cax = h_1_ax(fig, total_pout['ax'], y_off=y_off1)
+    total_cb = plt.colorbar(total_pout['mesh'], cax=total_cax, \
+            orientation='horizontal')
+    total_cb.set_label(NO2_VCD_unit)
+
+    soil_cax = h_1_ax(fig, soil_pout['ax'], y_off=y_off1)
+    soil_cb = plt.colorbar(soil_pout['mesh'], cax=soil_cax, \
+            orientation='horizontal')
+    soil_cb.set_label(NO2_VCD_unit)
+
+    ratio_cax = h_1_ax(fig, ratio_pout['ax'])
+    ratio_cb = plt.colorbar(ratio_pout['mesh'], cax=ratio_cax, \
+            orientation='horizontal')
 
 
 

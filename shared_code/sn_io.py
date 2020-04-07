@@ -4,10 +4,13 @@ Created on January 2, 2020
 @author: Yi Wang
 """
 
+import datetime
 from netCDF4 import Dataset
 import numpy as np
+import os
 
-from mylib.grid_utility import generate_grid_gc_2x25
+from mylib.grid_utility import generate_grid_gc_2x25, get_center_index
+from mylib.grid_utility import get_center_index_latlon
 from mylib.io import read_nc
 
 def read_nc_emissions_multifiles(root_dir, scene_tup, month,
@@ -42,11 +45,13 @@ def read_nc_emissions_multifiles(root_dir, scene_tup, month,
     out_dict['lon_e'] = lon_e
 
     return out_dict
-
-
+#
+#------------------------------------------------------------------------------
+#
 def get_nc_NO_emi_ratio_multifiles(root_dir, scene_tup, month,
         varname,
         gc_run='geosfp_2x25_tropchem', res='2x25', 
+        region_limit=None,
         verbose=True):
     """
     The ratio *varname* NO emisions to total NO emissions
@@ -54,8 +59,19 @@ def get_nc_NO_emi_ratio_multifiles(root_dir, scene_tup, month,
 
     varname_all = [varname, 'EmisNO_Total']
 
+    if res == '2x25':
+        lat_e, lon_e, lat_c, lon_c = generate_grid_gc_2x25()
+
+    # region_limit
+    if region_limit is not None:
+        i1, i2, j1, j2 = \
+                get_center_index_latlon(lat_e, lon_e, region_limit)
+
+
     out_dict = {}
     emi_ratio_dict = {}
+    emi_varname_dict = {}
+    emi_total_dict = {}
     for i in range(len(scene_tup)):
 
         scene = scene_tup[i]
@@ -70,8 +86,13 @@ def get_nc_NO_emi_ratio_multifiles(root_dir, scene_tup, month,
         # soil
         emi_soil = data_dict[varname_all[0]]
 
+
         # total
         emi_total = np.sum(data_dict[varname_all[1]], axis=0)
+
+        if region_limit is not None:
+            emi_soil  = emi_soil[i1:i2+1,j1:j2+1]
+            emi_total = emi_total[i1:i2+1,j1:j2+1]
 
         # ratio
         ratio = np.full_like(emi_total, np.nan)
@@ -79,19 +100,27 @@ def get_nc_NO_emi_ratio_multifiles(root_dir, scene_tup, month,
         ratio[flag] = emi_soil[flag] / emi_total[flag]
         emi_ratio_dict[scene] = ratio
 
+        emi_varname_dict[scene] = emi_soil
 
-    if res == '2x25':
-        lat_e, lon_e, lat_c, lon_c = generate_grid_gc_2x25()
+        emi_total_dict[scene] = emi_total
+
+
     lon_e, lat_e = np.meshgrid(lon_e, lat_e)
-
+    if region_limit is not None:
+        lat_e = lat_e[i1:i2+2,j1:j2+2]
+        lon_e = lon_e[i1:i2+2,j1:j2+2]
 
     out_dict['scene_tup'] = scene_tup
     out_dict['emi_ratio_dict'] = emi_ratio_dict
+    out_dict[varname+'_dict'] = emi_varname_dict
+    out_dict['emi_total_dict'] = emi_total_dict
     out_dict['lat_e'] = lat_e
     out_dict['lon_e'] = lon_e
 
     return out_dict
-
+#
+#------------------------------------------------------------------------------
+#
 def read_VCD_multiscenes(filename, scene_tup, mod_scene_var_list=[], 
         sat_var_list=[], mod_var_list=[], latlon=True, verbose=True):
     """
@@ -124,6 +153,140 @@ def read_VCD_multiscenes(filename, scene_tup, mod_scene_var_list=[],
 
     # get all varilables
     out_dict = read_nc(filename, varname_list, verbose=verbose)
+
+    return out_dict
+#
+#------------------------------------------------------------------------------
+#
+def read_VCD_multiscenes_days(file_str, data_dir, startDate, endDate,
+        scene_tup, mod_scene_var_list=[],
+        sat_var_list=[], mod_var_list=[], latlon=True,
+        sat_cv_name='sat_ColumnAmountNO2Trop',
+        sat_cv_flag=True, sat_cv_thre=None, sat_ave_thre=None,
+        region_limit=None, verbose=True):
+    """
+    (ywang, 03/30/20)
+    """
+
+    # all variable names
+    varname_list = []
+
+    # mod_scene_var_list
+    for i in range(len(scene_tup)):
+
+        scene = scene_tup[i]
+
+        for j in range(len(mod_scene_var_list)):
+
+            mod_scene_var = mod_scene_var_list[j]
+
+            varname_list.append(mod_scene_var + scene)
+
+    # sat_var_list
+    varname_list.extend(sat_var_list)
+
+    # mod_var_list
+    varname_list.extend(mod_var_list)
+
+    # data_dir
+    if data_dir[-1] != '/':
+        data_dir = data_dir + '/'
+
+    # Date
+    currDate   = startDate
+    currDate_D = datetime.datetime.strptime(currDate, '%Y-%m-%d')
+    endDate_D  = datetime.datetime.strptime(endDate,  '%Y-%m-%d')
+
+    first_flag = True
+    out_dict = {}
+    for varname in varname_list:
+        out_dict[varname] = []
+    while currDate_D <= endDate_D:
+        
+        # current date
+        currDate = str(currDate_D)[0:10]
+        print(''.join(np.full((79,), '-')))
+        print('processing ' + currDate)
+
+        filename = data_dir + file_str.replace('YYYY-MM-DD', currDate)
+
+        if os.path.exists(filename):
+            one_dict = read_VCD_multiscenes(filename, scene_tup, 
+                    mod_scene_var_list=mod_scene_var_list,
+                    sat_var_list=sat_var_list, 
+                    mod_var_list=mod_var_list, latlon=first_flag, 
+                    verbose=True)
+
+            if first_flag:
+                out_dict['Latitude']    = one_dict['Latitude']
+                out_dict['Latitude_e']  = one_dict['Latitude_e']
+                out_dict['Longitude']   = one_dict['Longitude']
+                out_dict['Longitude_e'] = one_dict['Longitude_e']
+                first_flag = False
+
+            for varname in varname_list:
+                out_dict[varname].append(one_dict[varname])
+
+        else:
+            exit()
+
+        # go to next day
+        currDate_D = currDate_D + datetime.timedelta(days=1)
+
+    for varname in varname_list:
+        out_dict[varname] = np.array(out_dict[varname])
+        print(varname, out_dict[varname].shape)
+
+    if region_limit is not None:
+
+        lat_e_1D = out_dict['Latitude_e'][:,0]
+        lat_min = region_limit[0]
+        lat_max = region_limit[2]
+        i1 = get_center_index(lat_e_1D, lat_min)
+        i2 = get_center_index(lat_e_1D, lat_max)
+
+        lon_e_1D = out_dict['Longitude_e'][0,:]
+        lon_min = region_limit[1]
+        lon_max = region_limit[3]
+        j1 = get_center_index(lon_e_1D, lon_min)
+        j2 = get_center_index(lon_e_1D, lon_max)
+
+        for varname in varname_list:
+            out_dict[varname] = out_dict[varname][:,i1:i2+1,j1:j2+1]
+
+        out_dict['Latitude']    = out_dict['Latitude'][i1:i2+1,j1:j2+1]
+        out_dict['Latitude_e']  = out_dict['Latitude_e'][i1:i2+2,j1:j2+2]
+        out_dict['Longitude']   = out_dict['Longitude'][i1:i2+1,j1:j2+1]
+        out_dict['Longitude_e'] = out_dict['Longitude_e'][i1:i2+2,j1:j2+2]
+
+    # coefficient of variance
+    if (sat_cv_thre is not None) or (sat_ave_thre is not None):
+        sat_cv_flag = True
+    if sat_cv_flag:
+        out_dict[sat_cv_name + '_ave'] = \
+                np.nanmean(out_dict[sat_cv_name], axis=0)
+        out_dict[sat_cv_name + '_std'] = \
+                np.nanstd(out_dict[sat_cv_name], axis=0)
+        out_dict[sat_cv_name + '_cv'] = out_dict[sat_cv_name + '_std'] / \
+                out_dict[sat_cv_name + '_ave']
+        flag = np.full_like(out_dict[sat_cv_name + '_cv'], True)
+
+    # sat_cv_thre
+    if sat_cv_thre is not None:
+        flag = np.logical_and(flag, \
+                out_dict[sat_cv_name + '_cv'] > sat_cv_thre)
+
+    # sat_ave_thre
+    if sat_ave_thre is not None:
+        flag = np.logical_and(flag, \
+                out_dict[sat_cv_name + '_ave'] > sat_ave_thre)
+
+    if (sat_cv_thre is not None) or (sat_ave_thre is not None):
+        for varname in varname_list:
+            out_dict[varname][:,np.logical_not(flag)] = np.nan
+
+
+
 
     return out_dict
 #
