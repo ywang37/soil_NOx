@@ -4,15 +4,22 @@ Created on January 2, 2020
 @author: Yi Wang
 """
 
+from calendar import monthrange
+from copy import deepcopy
 import datetime
 from netCDF4 import Dataset
 import numpy as np
 import os
 
+from mylib.constants import molec_to_kgN
 from mylib.grid_utility import generate_grid_gc_2x25, get_center_index
 from mylib.grid_utility import get_center_index_latlon
 from mylib.io import read_nc
 
+
+#
+#------------------------------------------------------------------------------
+#
 def read_nc_emissions_multifiles(root_dir, scene_tup, month,
         varname, gc_run='geosfp_2x25_tropchem', res='2x25', 
         verbose=True):
@@ -45,6 +52,56 @@ def read_nc_emissions_multifiles(root_dir, scene_tup, month,
     out_dict['lon_e'] = lon_e
 
     return out_dict
+#
+#------------------------------------------------------------------------------
+#
+def read_NO_emissions(filename, varns=[], verbose=True,
+        amount=True, days=None):
+    """
+    (ywang, 04/07/2020)
+    Parameters
+    ----------
+    amount : logical
+        If True, convert emission rates to emission amount
+    """
+
+    if len(varns)  == 0:
+        varnames = ['EmisNO_Soil', 'EmisNO_Total']
+    else:
+        varnames = deepcopy(varns)
+    varnames.append('AREA')
+    varnames = list(set(varnames))
+
+    if verbose:
+        print(' - read_NO_emissions: reading ' + filename)
+
+    # read data
+    out_data = read_nc(filename, varnames, squeeze=True)
+    for var in out_data:
+        if out_data[var].ndim == 3:
+            out_data[var] = np.sum(out_data[var], axis=0)
+
+    # convert emission rates to emission amount
+    if amount:
+
+        # assume calcualte emissions for one month
+        # and get month from filename
+        if days is None:
+            time_c = filename.split('/').split('.')[1]
+            year = int(time_c[0:4])
+            month = int(time_c[4:6])
+            days = monthrange(year, month)[1]
+
+        day_sceonds = 24.0 * 3600.0
+
+        # molec/cm2/s => kg N
+        AREA = out_data['AREA']
+        for var in out_data:
+            if var != 'AREA':
+                out_data[var+'_amount'] = out_data[var] * day_sceonds * AREA \
+                        * molec_to_kgN
+
+    return out_data
 #
 #------------------------------------------------------------------------------
 #

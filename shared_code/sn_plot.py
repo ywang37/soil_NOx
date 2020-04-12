@@ -889,13 +889,15 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
 #
 #------------------------------------------------------------------------------
 #
-def plot_NO2_CV_emi_ratio(data_dict, 
-        left=0.1, right=0.95, top=0.9, bottom=0.2,
-        wspace=0.2, hspace=0.5,
+def plot_NOx_emi_ratio(data_dict, 
+        left=0.1, right=0.95, top=0.95, bottom=0.15,
+        wspace=0.2, hspace=0.6,
         NO2_VCD_unit=r'[molec cm$^{-2}$]',
-        y_off1=-0.03,
+        ratio=0.03,
+        y_off1=-0.02,
+        y_off2=-0.04,
         xticks=np.arange(-180.0, 180.1, 60.0),
-        yticks=np.arange(-90.0, 90.1, 3.0),
+        yticks=np.arange(-90.0, 90.1, 30.0),
         ):
     """
     (ywang 03/31/20)
@@ -903,7 +905,7 @@ def plot_NO2_CV_emi_ratio(data_dict,
 
     nrow = 3
     ncol = 1
-    figsize = (4, 7)
+    figsize = (6, 9)
     projPos = [0, 1, 2]
     layout_dict = multiFigure(nrow, ncol,
             left=left, right=right, top=top, bottom=bottom,
@@ -916,19 +918,19 @@ def plot_NO2_CV_emi_ratio(data_dict,
     lon_e = data_dict['Longitude_e']
 
     # totol
-    total_pout = cartopy_plot(lon_e, lat_e, data_dict['total'], 
+    total_pout = cartopy_plot(lon_e, lat_e, data_dict['EmisNO_Total'], 
             ax=axes[0], vmin=0.0, vmax=None,
             cmap=deepcopy(WhGrYlRd_map), cbar=False)
     axes[0].set_title('Total')
 
     # soil
-    soil_pout = cartopy_plot(lon_e, lat_e, data_dict['soil'],
+    soil_pout = cartopy_plot(lon_e, lat_e, data_dict['EmisNO_Soil'],
             ax=axes[1], vmin=0.0, vmax=None,
             cmap=deepcopy(WhGrYlRd_map), cbar=False)
     axes[1].set_title('Soil')
 
     # ratio
-    ratio_pout = cartopy_plot(lon_e, lat_e, data_dict['ratio'],
+    ratio_pout = cartopy_plot(lon_e, lat_e, data_dict['EmisNO_Soil_ratio'],
             ax=axes[2], vmin=0.0, vmax=1.0,
             cmap=deepcopy(WhGrYlRd_map), cbar=False)
     axes[2].set_title('Soil / Total')
@@ -952,17 +954,17 @@ def plot_NO2_CV_emi_ratio(data_dict,
 
 
     # colorbar
-    total_cax = h_1_ax(fig, total_pout['ax'], y_off=y_off1)
+    total_cax = h_1_ax(fig, total_pout['ax'], y_off=y_off1, ratio=ratio)
     total_cb = plt.colorbar(total_pout['mesh'], cax=total_cax, \
             orientation='horizontal')
     total_cb.set_label(NO2_VCD_unit)
 
-    soil_cax = h_1_ax(fig, soil_pout['ax'], y_off=y_off1)
+    soil_cax = h_1_ax(fig, soil_pout['ax'], y_off=y_off1, ratio=ratio)
     soil_cb = plt.colorbar(soil_pout['mesh'], cax=soil_cax, \
             orientation='horizontal')
     soil_cb.set_label(NO2_VCD_unit)
 
-    ratio_cax = h_1_ax(fig, ratio_pout['ax'])
+    ratio_cax = h_1_ax(fig, ratio_pout['ax'], y_off=y_off2, ratio=ratio)
     ratio_cb = plt.colorbar(ratio_pout['mesh'], cax=ratio_cax, \
             orientation='horizontal')
 
