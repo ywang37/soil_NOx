@@ -42,9 +42,9 @@ lw=0.5
 diff_title_list = \
         [
         'Control', \
-        'Soil_T - Control', \
-        'Obs - Control', \
-        'Soil_T_Obs - Control', \
+        'Soil_T_old - Control', \
+        'Air_T_new - Control', \
+        'Soil_T_new - Control', \
         ]
 
 #

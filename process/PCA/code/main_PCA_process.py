@@ -4,6 +4,7 @@ import glob
 import numpy as np
 from sklearn.decomposition import PCA
 
+from mylib.grid_utility import region_limit_flag
 from mylib.io import read_nc
 from mylib.land_ocean.land_ocean import is_land
 from mylib.pca.io import write_2D_PCA_nc
@@ -24,11 +25,20 @@ scene = 'summer'
 
 land_ocean = 'land'
 
+deseasonal = True
+
 res = '2x25'
 
 # *ratio* data should be available
 ratio = 0.8
 
+
+# soil NOx emission ratio data
+soil_emi_file = '/Dedicated/jwang-data/ywang/soil_NOx/plot/\
+plot_soil_NOx_ratio/data/NO_emi_ave_2015-2019_06-08.nc'
+soil_emi_thre = 1e10
+soil_emi_flag = True
+soil_emi_ratio_thre = 0.5
 
 #
 # End user parameters
@@ -39,7 +49,6 @@ if scene == 'summer':
 elif scene == 'all_season':
     month_list = ['01', '02', '03', '04', '05', '06',
                   '07', '08', '09', '10', '11', '12']
-
 
 # threshold (at least *ratio* data are available)
 threshold = int((end_year - start_year + 1) * len(month_list) * ratio)
@@ -82,6 +91,17 @@ avail_month = np.logical_not( np.isnan(in_var_all) )
 count_month = np.sum(avail_month, axis=2)
 flag = (count_month >= threshold)
 
+# soil emission ratio
+soil_emi_c = ''
+if soil_emi_flag:
+    soil_emi_c = '_soil_emi{}'.format(soil_emi_ratio_thre)
+    soil_emi_varnames = ['EmisNO_Soil', 'EmisNO_Soil_ratio']
+    soil_emi_data = read_nc(soil_emi_file, soil_emi_varnames, verbose=True)
+    EmisNO_Soil = soil_emi_data['EmisNO_Soil']
+    EmisNO_Soil_ratio = soil_emi_data['EmisNO_Soil_ratio']
+    flag = np.logical_and(flag, EmisNO_Soil > soil_emi_thre)
+    flag = np.logical_and(flag, EmisNO_Soil_ratio > soil_emi_ratio_thre)
+
 # calcaulte average for selected grid
 ave = np.nanmean(in_var_all, axis=2)
 ave[np.logical_not(flag)] = np.nan
@@ -94,6 +114,53 @@ if land_ocean == 'land':
 
 # mask
 ave[np.logical_not(land_ocean_flag)] = np.nan
+
+# use average to substitute nan.
+for i in range(flag.shape[0]):
+    for j in range(flag.shape[1]):
+
+        if (flag[i,j] and land_ocean_flag[i,j]):
+
+            tmp = in_var_all[i,j,:]
+            tmp_nan = np.isnan(tmp)
+            tmp[tmp_nan] = ave[i,j]
+
+# Assign nan to grid that are not used.
+in_var_all[np.isnan(ave)] = np.nan
+
+# deseaonal
+deseasonal_c = ''
+if deseasonal:
+
+    deseasonal_c = '_deseasonal'
+
+    n_mon = len(month_list)
+    old_shape = in_var_all.shape
+    new_shape = (old_shape[0], old_shape[1], old_shape[2]//n_mon, n_mon)
+    in_var_year_month = in_var_all.reshape(new_shape)
+
+    ## just for validate code
+    #region_limit = [31, 110, 40, 120]
+    #region_flag = region_limit_flag(lat, lon, region_limit)
+    #print(np.nanmean(in_var_year_month[region_flag, :,:], axis=(0,1)))
+
+    # calcaulte multi-year mean for every month
+    in_var_month = np.nanmean(in_var_year_month, axis=2)
+    #print(in_var_month.shape, in_var_year_month.shape)
+
+    # deseaonal
+    for i_mon in range(n_mon):
+        for i_yr in range(in_var_year_month.shape[2]):
+            in_var_year_month[:,:,i_yr,i_mon]  = \
+                    in_var_year_month[:,:,i_yr,i_mon] - in_var_month[:,:,i_mon]
+
+    in_var_all = in_var_year_month.reshape(old_shape)
+
+    ## just for validate code
+    #region_limit = [31, 110, 40, 120]
+    #region_flag = region_limit_flag(lat, lon, region_limit)
+    #print(np.nanmean(in_var_year_month[region_flag, :,:], axis=(0,1)))
+    #print(np.nanmean(in_var_year_month[region_flag, 0,:], axis=(0,)))
 
 # prepare data for PCA
 ii_ind = []
@@ -110,10 +177,8 @@ for i in range(flag.shape[0]):
 
             # store data
             tmp = in_var_all[i,j,:]
-            tmp_nan = np.isnan(tmp)
-            tmp[tmp_nan] = ave[i,j]
             PCA_data.append(tmp)
-in_var_all[np.isnan(ave)] = np.nan
+
 ii_ind = np.array(ii_ind) 
 jj_ind = np.array(jj_ind) 
 PCA_data = np.transpose(np.array(PCA_data))
@@ -151,7 +216,8 @@ out_dict['explained_variance'] = pca.explained_variance_
 
 # output
 out_file = outRootDir + 'PCA_' + str(start_year) + '-' + str(end_year) \
-        + '_' + scene + '_' + land_ocean + '_' + res + '.nc'
+        + '_' + scene + '_' + land_ocean + '_' + res \
+        + deseasonal_c + soil_emi_c  + '.nc'
 write_2D_PCA_nc(out_file, out_dict)
 
 

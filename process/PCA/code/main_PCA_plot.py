@@ -28,6 +28,11 @@ scene = 'summer'
 
 land_ocean = 'land'
 
+deseasonal = True
+
+soil_emi_flag = True
+soil_emi_ratio_thre = 0.5
+
 res = '2x25'
 
 n_components = 6
@@ -37,6 +42,16 @@ verbose = True
 #
 # End user parameters
 #####################
+
+# deseaonal
+deseasonal_c = ''
+if deseasonal:
+    deseasonal_c = '_deseasonal'
+
+# soil_emi_flag
+soil_emi_c = ''
+if soil_emi_flag:
+    soil_emi_c = '_soil_emi{}'.format(soil_emi_ratio_thre)
 
 if scene == 'all_season':
     xticks = np.array(range(0, (end_year-start_year+1)*12, 12))
@@ -52,7 +67,8 @@ elif scene == 'summer':
 time_ticks = (xticks, xticklablels)
 
 title = 'PCA_' + str(start_year) + '-' + str(end_year) \
-        + '_' + scene + '_' + land_ocean + '_' + res
+        + '_' + scene + '_' + land_ocean + '_' + res \
+        + deseasonal_c + soil_emi_c
 
 fig_dir = figRootDir + title + '/'
 if not os.path.isdir(fig_dir):

@@ -812,7 +812,7 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
         
 
 
-    labels = ['OMI', 'Control', 'Soil_T', 'Obs', 'Soil_T_obs']
+    labels = ['OMI', 'Control', 'Soil_T_old', 'Air_T_new', 'Soil_T_new']
 
     xlabel = u'Soil temperature [\u00B0C]'
     ylabel = r'NO$_2$ VCD [molec cm$^{-2}$]'
