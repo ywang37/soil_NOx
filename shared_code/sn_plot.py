@@ -967,7 +967,66 @@ def plot_NOx_emi_ratio(data_dict,
     ratio_cax = h_1_ax(fig, ratio_pout['ax'], y_off=y_off2, ratio=ratio)
     ratio_cb = plt.colorbar(ratio_pout['mesh'], cax=ratio_cax, \
             orientation='horizontal')
+#
+#------------------------------------------------------------------------------
+#
+def plot_ave_series(data, area, lat_e, lon_e, units='',
+        m_vmin=None,
+        xticks=np.arange(-180.0, 180.1, 10.0),
+        yticks=np.arange(-90.0, 90.1, 5.0),
+        time_ticks=None,
+        rotation=30.0,
+        ):
+    """
+    """
+
+    # ave
+    ave = np.nanmean(data, axis=0)
+
+    # series
+    series = np.zeros((data.shape[0],))
+    for i in range(data.shape[0]):
+        series[i] = np.nansum(data[i,:,:] * area) / np.nansum(area)
+
+    # begin plot
+    nrow = 2
+    ncol = 1
+    figsize = (8, 6)
+    projPos = [0]
+    layout_dict = multiFigure(nrow, ncol,
+            figsize=figsize, projPos=projPos)
+    fig  = layout_dict['fig']
+    axes = layout_dict['axes']
+
+    # plot ave
+    pout = cartopy_plot(lon_e, lat_e, ave,
+            ax=axes[0], vmin=m_vmin, cbar=True)
+    cb = pout['cb']
+    panel_tick_label([axes[0]], ncol, xticks=xticks, yticks=yticks)
+    cb.set_label(units)
+    states_provinces = cfeature.NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
+    axes[0].add_feature(cfeature.BORDERS)
+    axes[0].add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+    axes[0].add_feature(cfeature.COASTLINE, zorder=200)
+    axes[0].set_xlim((lon_e[0,0],lon_e[0,-1]))
+    axes[0].set_ylim((lat_e[0,0],lat_e[-1,0]))
+
+    # plot series
+    x = range(len(series))
+    axes[1].plot(x, series, '-o', markersize=3)
+    axes[1].set_xlabel('Month')
+    axes[1].set_ylabel(units)
+
+    if time_ticks is not None:
+        axes[1].set_xticks(time_ticks[0])
+        axes[1].set_xticklabels(time_ticks[1], rotation=rotation)
 
 
-
-
+    
+#
+#------------------------------------------------------------------------------
+#

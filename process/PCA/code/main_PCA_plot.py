@@ -21,6 +21,7 @@ dataRootDir = '../data/PCA/'
 figRootDir = '../figure/'
 
 start_year = 2005
+#start_year = 2014
 end_year   = 2019
 
 scene = 'summer'
@@ -31,7 +32,7 @@ land_ocean = 'land'
 deseasonal = True
 
 soil_emi_flag = True
-soil_emi_ratio_thre = 0.5
+soil_emi_ratio_thre = 0.3
 
 res = '2x25'
 

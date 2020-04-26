@@ -18,6 +18,7 @@ inRootDir  = '../data/monthly/'
 outRootDir = '../data/PCA/'
 
 start_year = 2005
+#start_year = 2014
 end_year   = 2019
 
 scene = 'summer'
@@ -35,10 +36,10 @@ ratio = 0.8
 
 # soil NOx emission ratio data
 soil_emi_file = '/Dedicated/jwang-data/ywang/soil_NOx/plot/\
-plot_soil_NOx_ratio/data/NO_emi_ave_2015-2019_06-08.nc'
+plot_soil_NOx_ratio/data/NO_emi_ave_2014-2019_06-08.nc'
 soil_emi_thre = 1e10
-soil_emi_flag = True
-soil_emi_ratio_thre = 0.5
+soil_emi_flag = False
+soil_emi_ratio_thre = 0.3
 
 #
 # End user parameters

@@ -24,7 +24,7 @@ data_dir = '../data/'
 
 fig_dir = '../figure/'
 
-start_year = 2015
+start_year = 2014
 end_year = 2019
 
 start_month = 6
