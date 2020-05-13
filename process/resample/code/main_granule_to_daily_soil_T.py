@@ -27,8 +27,8 @@ granule_dir = '../data/granule/'
 
 daily_dir = '../data/daily/'
 
-startDate = '2016-06-01'
-endDate   = '2016-08-31'
+startDate = '2014-06-01'
+endDate   = '2014-08-31'
 
 # model species name
 mod_spe_name = 'mod_NO2Trop'

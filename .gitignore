@@ -2,4 +2,6 @@ GEOS-Chem_*/
 ._.DS_Store
 .DS_Store
 GEOS-FP_process/
+GEOSFP_runs/
 MERRA2_process/
+MERRA2_runs/

@@ -50,6 +50,9 @@ def plot_panel_variables(root_dir, scene_tup, month,
         varname='EmisNO_Soil', read_func=read_nc_emissions_multifiles,
         gc_run='geosfp_2x25_tropchem', res='2x25',
         read_func_varname='emi_dict',
+        scene_prefix='GEOS-Chem_',
+        subdir='',
+        scale=1.0,
         vmin=None, vmax=None, units='',
         cmap=None, cb_ticks=None, cb_ticklabels=None,
         seperate_cbar=False,
@@ -64,6 +67,8 @@ def plot_panel_variables(root_dir, scene_tup, month,
     # read all data
     data_dict = read_func(root_dir, scene_tup, month,
             varname, gc_run=gc_run, res=res,
+            scene_prefix=scene_prefix,
+            subdir=subdir,
             verbose=verbose)
 
     # plot
@@ -101,9 +106,9 @@ def plot_panel_variables(root_dir, scene_tup, month,
         scene = scene_tup[i]
         ax = ax_list[i]
 
-        emi = data_dict[read_func_varname][scene]
+        emi = data_dict[read_func_varname][scene] * scale
         if ( (i >= 1) and diff ):
-            emi0 = data_dict[read_func_varname][scene_tup[0]]
+            emi0 = data_dict[read_func_varname][scene_tup[0]] * scale
             emi_diff = emi - emi0
             flag = np.logical_and(emi0<1e-6, emi<1e-6)
             emi_diff = np.ma.masked_array(emi_diff, flag)

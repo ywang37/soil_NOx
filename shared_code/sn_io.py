@@ -21,7 +21,9 @@ from mylib.io import read_nc
 #------------------------------------------------------------------------------
 #
 def read_nc_emissions_multifiles(root_dir, scene_tup, month,
-        varname, gc_run='geosfp_2x25_tropchem', res='2x25', 
+        varname, gc_run='geosfp_2x25_tropchem', res='2x25',
+        scene_prefix='GEOS-Chem_',
+        subdir = '',
         verbose=True):
     """
     """
@@ -32,8 +34,8 @@ def read_nc_emissions_multifiles(root_dir, scene_tup, month,
 
         scene = scene_tup[i]
 
-        filename = root_dir + 'GEOS-Chem_' + scene + '/runs/' + \
-                gc_run + '_' + month + '/' + 'HEMCO_diagnostics.' + \
+        filename = root_dir + scene_prefix + scene + '/runs/' + \
+                gc_run + '_' + month + '/' + subdir + 'HEMCO_diagnostics.' + \
                 month + '010000.nc'
 
         data_dict = read_nc(filename, [varname], verbose=verbose, squeeze=True)
