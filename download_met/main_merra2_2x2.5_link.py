@@ -14,9 +14,15 @@ res = 'GEOS_2x2.5'
 
 model = 'MERRA2'
 
-yyyymm_list = ['201805','201806', \
-        '201807', '201808', '201809']
+#yyyymm_list = ['201905','201906', \
+#        '201907', '201908', '201909']
 #yyyymm_list = ['201501']
+
+yyyymm_list = []
+month = ['05', '06', '07', '08', '09']
+for year in range(2006, 2018):
+    for mo in month:
+        yyyymm_list.append(str(year) + mo)
 
 #
 # End user parameters
