@@ -36,10 +36,6 @@ units_dict = {}
 for varn in varnames:
     units_dict[varn] = 'K'
 
-indata_dict = {}
-for varn in varnames:
-    indata_dict[varn] = []
-
 coor_flag = True
 coor_dict = {}
 for year in range(startYear, endYear+1):
@@ -54,6 +50,10 @@ for year in range(startYear, endYear+1):
     for month in month_list:
 
         print('--- ' + year_c + month + ' ---')
+
+        indata_dict = {}
+        for varn in varnames:
+            indata_dict[varn] = []
 
         # inDir
         inDir = inRootDir + year_c + '/' + month + '/'

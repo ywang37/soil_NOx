@@ -23,8 +23,8 @@ from sn_plot import plot_ave_series
 #
 
 
-pca_file = '/Dedicated/jwang-data/ywang/soil_NOx/process/PCA/data/PCA/\
-PCA_2005-2019_summer_land_2x25_deseasonal_soil_emi0.3.nc'
+pca_file = '/Dedicated/jwang-data/ywang/soil_NOx/process/PCA_OMI_L3_NO2\
+/data/PCA/PCA_2005-2019_summer_land_2x25_deseasonal_soil_emi0.3.nc'
 
 root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/process/soil_T/data/monthly/'
 
@@ -35,7 +35,7 @@ fig_dir = '../figure/'
 
 region_list = ['Kazakhstan', 'India', 'Sahel', 'US']
 
-units = u'Soil temperature [\u00B0C]'
+units = u'2-m temperature [\u00B0C]'
 
 verbose = True
 

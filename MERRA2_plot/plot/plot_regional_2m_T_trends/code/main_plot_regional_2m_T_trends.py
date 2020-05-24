@@ -23,10 +23,11 @@ from sn_plot import plot_ave_series
 #
 
 
-pca_file = '/Dedicated/jwang-data/ywang/soil_NOx/process/PCA_OMI_L3_NO2\
-/data/PCA/PCA_2005-2019_summer_land_2x25_deseasonal_soil_emi0.3.nc'
+pca_file = '/Dedicated/jwang-data/ywang/soil_NOx/process/PCA_OMI_L3_NO2/\
+data/PCA/PCA_2005-2019_summer_land_2x25_deseasonal_soil_emi0.3.nc'
 
-root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/process/soil_T/data/monthly/'
+root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/MERRA2_plot/\
+process/soil_T/data/monthly/'
 
 area_file = '/Dedicated/jwang-data/ywang/soil_NOx/GEOS-Chem_ori/runs/' \
         + 'geosfp_2x25_tropchem_201406/HEMCO_diagnostics.201406010000.nc'
@@ -35,7 +36,7 @@ fig_dir = '../figure/'
 
 region_list = ['Kazakhstan', 'India', 'Sahel', 'US']
 
-units = u'Soil temperature [\u00B0C]'
+units = u'2-m temperature [\u00B0C]'
 
 verbose = True
 
@@ -58,18 +59,12 @@ m_vmin = None
 #####################
 
 # agruements
-start_year = 2014
+start_year = 2005
 end_year = 2019
 
 start_month = 6
 end_month = 8
 
-n_mon = end_month - start_month + 1
-xticks = np.array(range(0, (end_year-start_year+1)*n_mon, n_mon))
-xticklablels = []
-for year in range(start_year, end_year+1):
-    xticklablels.append(str(year) + str(start_month).zfill(2))
-    time_ticks = (xticks, xticklablels)
 
 argv = sys.argv[1:]
 
@@ -98,8 +93,15 @@ ey_c = str(end_year)
 sm_c = str(start_month).zfill(2)
 em_c = str(end_month).zfill(2)
 
+n_mon = end_month - start_month + 1
+xticks = np.array(range(0, (end_year-start_year+1)*n_mon, n_mon))
+xticklablels = []
+for year in range(start_year, end_year+1):
+    xticklablels.append(str(year) + str(start_month).zfill(2))
+    time_ticks = (xticks, xticklablels)
+
 # variable name
-varn = 'TSOIL1'
+varn = 'T2M'
 
 # loop year and month
 T_mon = []
@@ -113,7 +115,7 @@ for iyr in range(start_year, end_year+1):
 
         print('---- process ' + yyyymm  + ' ----')
 
-        T_file = root_dir + yyyy + '/GEOSFP.' + yyyymm + '.' + res + '.nc'
+        T_file = root_dir + yyyy + '/MERRA2.' + yyyymm + '.' + res + '.nc'
 
         # read data
         indata = read_nc(T_file, varnames=[varn])
@@ -170,7 +172,7 @@ for region in region_list:
             units=units, m_vmin=m_vmin, time_ticks=time_ticks)
 
     #
-    sub_title = 'Soil_T_' + str(start_year) + '-' + str(end_year) \
+    sub_title = 'T2M_' + str(start_year) + '-' + str(end_year) \
             + '_' + region + '.png'
     figname = fig_dir + sub_title
     plt.savefig(figname, format='png', dpi=300)

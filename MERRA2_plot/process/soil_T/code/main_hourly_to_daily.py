@@ -21,7 +21,9 @@ month_list = ['06', '07', '08']
 
 res = '2x25'
 
-varnames = ['TSOIL1', 'T2M']
+T_varnames = ['TSOIL1', 'T2M']
+
+other_varnames = ['GWETTOP']
 
 nan_thre = 200.0 # K
 
@@ -36,10 +38,13 @@ if (res == '2x25'):
 lon_c, lat_c = np.meshgrid(lon_c, lat_c)
 lon_e, lat_e = np.meshgrid(lon_e, lat_e)
 
+varnames = T_varnames + other_varnames
+
 # units_dict
 units_dict = {}
-for varn in varnames:
+for varn in T_varnames:
     units_dict[varn] = 'K'
+units_dict['GWETTOP'] = 'unitless'
 
 for year in range(startYear, endYear+1):
 
@@ -78,7 +83,7 @@ for year in range(startYear, endYear+1):
             indata = read_nc(infile, varnames, verbose=True)
 
             # nan
-            for varn in varnames:
+            for varn in T_varnames:
                 flag = (indata[varn] <= nan_thre)
                 indata[varn][flag] = np.nan
 

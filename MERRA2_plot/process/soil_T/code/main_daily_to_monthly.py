@@ -21,7 +21,9 @@ month_list = ['06', '07', '08']
 
 res = '2x25'
 
-varnames = ['TSOIL1', 'T2M']
+T_varnames = ['TSOIL1', 'T2M']
+
+other_varnames = ['GWETTOP']
 
 coor_names = ['Latitude', 'Longitude', 'Latitude_e', 'Longitude_e']
 
@@ -31,14 +33,13 @@ nan_thre = 200.0 # K
 # End user parameters
 #####################
 
+varnames = T_varnames + other_varnames
+
 # units_dict
 units_dict = {}
-for varn in varnames:
+for varn in T_varnames:
     units_dict[varn] = 'K'
-
-indata_dict = {}
-for varn in varnames:
-    indata_dict[varn] = []
+units_dict['GWETTOP'] = 'unitless'
 
 coor_flag = True
 coor_dict = {}
@@ -54,6 +55,10 @@ for year in range(startYear, endYear+1):
     for month in month_list:
 
         print('--- ' + year_c + month + ' ---')
+
+        indata_dict = {}
+        for varn in varnames:
+            indata_dict[varn] = []
 
         # inDir
         inDir = inRootDir + year_c + '/' + month + '/'

@@ -23,10 +23,11 @@ from sn_plot import plot_ave_series
 #
 
 
-pca_file = '/Dedicated/jwang-data/ywang/soil_NOx/process/PCA_OMI_L3_NO2\
-/data/PCA/PCA_2005-2019_summer_land_2x25_deseasonal_soil_emi0.3.nc'
+pca_file = '/Dedicated/jwang-data/ywang/soil_NOx/process/PCA_OMI_L3_NO2/\
+data/PCA/PCA_2005-2019_summer_land_2x25_deseasonal_soil_emi0.3.nc'
 
-root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/process/soil_T/data/monthly/'
+root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/MERRA2_plot/\
+process/soil_T/data/monthly/'
 
 area_file = '/Dedicated/jwang-data/ywang/soil_NOx/GEOS-Chem_ori/runs/' \
         + 'geosfp_2x25_tropchem_201406/HEMCO_diagnostics.201406010000.nc'
@@ -58,7 +59,7 @@ m_vmin = None
 #####################
 
 # agruements
-start_year = 2014
+start_year = 2005
 end_year = 2019
 
 start_month = 6
@@ -113,7 +114,7 @@ for iyr in range(start_year, end_year+1):
 
         print('---- process ' + yyyymm  + ' ----')
 
-        T_file = root_dir + yyyy + '/GEOSFP.' + yyyymm + '.' + res + '.nc'
+        T_file = root_dir + yyyy + '/MERRA2.' + yyyymm + '.' + res + '.nc'
 
         # read data
         indata = read_nc(T_file, varnames=[varn])
