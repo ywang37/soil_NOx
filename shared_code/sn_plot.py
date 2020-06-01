@@ -48,6 +48,7 @@ def layout_3(top=0.95, bottom=0.10,
 
 def plot_panel_variables(root_dir, scene_tup, month,
         varname='EmisNO_Soil', read_func=read_nc_emissions_multifiles,
+        path=1,
         gc_run='geosfp_2x25_tropchem', res='2x25',
         read_func_varname='emi_dict',
         scene_prefix='GEOS-Chem_',
@@ -68,6 +69,7 @@ def plot_panel_variables(root_dir, scene_tup, month,
     data_dict = read_func(root_dir, scene_tup, month,
             varname, gc_run=gc_run, res=res,
             scene_prefix=scene_prefix,
+            path=path,
             subdir=subdir,
             verbose=verbose)
 

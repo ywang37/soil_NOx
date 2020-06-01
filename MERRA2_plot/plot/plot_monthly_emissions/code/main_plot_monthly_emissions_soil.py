@@ -16,7 +16,8 @@ from sn_plot import plot_panel_variables, layout_2
 # Start user parameters
 #
 
-root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/MERRA2_runs/'
+root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/MERRA2_plot/process/\
+emissions/data/'
 
 fig_dir = '../figure/'
 
@@ -85,6 +86,7 @@ diff_title_list = \
 
 # emissions
 plot_panel_variables(root_dir, scene_tup, month,
+        path=2,
         varname=varname, vmin=vmin, vmax=vmax, units=units,
         gc_run=gc_run,
         subdir=subdir,
@@ -98,6 +100,7 @@ plt.savefig(figname, format='png', dpi=300)
 
 # emission differences
 plot_panel_variables(root_dir, scene_tup, month,
+        path=2,
         varname=varname,  vmin=vmin, vmax=vmax, units=units, 
         vmin_diff=vmin_diff, vmax_diff=vmax_diff, units_diff=units_diff,
         gc_run=gc_run,

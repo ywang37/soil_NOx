@@ -24,6 +24,7 @@ def read_nc_emissions_multifiles(root_dir, scene_tup, month,
         varname, gc_run='geosfp_2x25_tropchem', res='2x25',
         scene_prefix='GEOS-Chem_',
         subdir = '',
+        path=1,
         verbose=True):
     """
     """
@@ -34,9 +35,12 @@ def read_nc_emissions_multifiles(root_dir, scene_tup, month,
 
         scene = scene_tup[i]
 
-        filename = root_dir + scene_prefix + scene + '/runs/' + \
-                gc_run + '_' + month + '/' + subdir + 'HEMCO_diagnostics.' + \
-                month + '010000.nc'
+        if path == 1:
+            filename = root_dir + scene_prefix + scene + '/runs/' + \
+                    gc_run + '_' + month + '/' + subdir + 'HEMCO_diagnostics.' + \
+                    month + '010000.nc'
+        elif path == 2:
+            filename = root_dir + scene + '/HEMCO_diagnostics.' + month  + '.nc'
 
         data_dict = read_nc(filename, [varname], verbose=verbose, squeeze=True)
         emi_dict[scene] = data_dict[varname]
