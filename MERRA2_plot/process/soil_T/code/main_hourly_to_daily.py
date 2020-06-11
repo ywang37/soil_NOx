@@ -17,7 +17,8 @@ outRootDir = '../data/daily/'
 startYear = 2005
 endYear   = 2019
 
-month_list = ['06', '07', '08']
+#month_list = ['06', '07', '08']
+month_list = ['01', '02', '12']
 
 res = '2x25'
 

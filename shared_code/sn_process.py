@@ -4,12 +4,14 @@ Created on May 31, 2020
 @author: Yi Wang
 """
 
+from copy import deepcopy
 import datetime
 from netCDF4 import Dataset
 import numpy as np
 import os
 
 from mylib.grid_utility import generate_grid_gc_2x25
+from mylib.io import read_nc, write_nc
 
 #
 #------------------------------------------------------------------------------
@@ -192,6 +194,80 @@ def daily_to_monthly_emissions(inDir, outDir, year, month, res='2x2.5'):
 
     # close file
     nc_out.close()
+#
+#------------------------------------------------------------------------------
+#
+def combine_NH_SH(north_file, south_file, combine_file):
+    """ Put data of Northern Hemisphere from *north_file* and 
+    data of Southern Hemisphere from *south_file* to 
+    *combine_file*.
+    (ywang, 06/03/2020)
+    """
+
+    month_list = ['06', '07', '08']
+
+    month_NH_SH_dict = {}
+    month_NH_SH_dict['06'] = '12'
+    month_NH_SH_dict['07'] = '01'
+    month_NH_SH_dict['08'] = '02'
+
+
+    data_dict = {}
+    units_dict = {}
+
+    coord_varnames = ['Latitude', 'Latitude_e', 'Longitude', 'Longitude_e']
+
+    #
+    print(' - combine_NH_SH: read ' + north_file)
+    nc_north = Dataset(north_file, 'r') 
+
+    # get all variable name in *north_file*
+    all_varnames = list(nc_north.variables.keys())
+    varnames = deepcopy(all_varnames)
+    for coord_var in coord_varnames:
+        varnames.pop( varnames.index(coord_var) )
+
+    # get units
+    for varn in varnames:
+        units_dict[varn] = getattr(nc_north.variables[varn], 'units')
+
+    # get coordinates
+    for coord_var in coord_varnames:
+        data_dict[coord_var] = nc_north.variables[coord_var][:]
+
+    # get *north_file* data
+    north_data_dict = {}
+    for varn in varnames:
+        north_data_dict[varn] = nc_north.variables[varn][:]
+
+    #
+    nc_north.close()
+
+    # get *south_file* data
+    print(' - combine_NH_SH: read ' + south_file)
+    nc_south = Dataset(south_file, 'r')
+    south_data_dict = {}
+    for varn in varnames:
+        if varn[-2:] in month_list:
+            south_varn = varn[:-2] + month_NH_SH_dict[varn[-2:]]
+            south_data_dict[varn] = nc_south.variables[south_varn][:]
+        else:
+            south_data_dict[varn] = nc_south.variables[varn][:]
+    nc_south.close()
+
+    # index that seperate NH and SH
+    ind = data_dict['Latitude'].shape[0] // 2
+
+    # extract and combine data
+    for varn in varnames:
+        data_dict[varn] = np.full_like(data_dict['Latitude'], np.nan)
+        # SH
+        data_dict[varn][:ind,:] = south_data_dict[varn][:ind,:]
+        # NH
+        data_dict[varn][ind:,:] = north_data_dict[varn][ind:,:]
+
+    # output data
+    write_nc(combine_file, data_dict, units_dict)
 #
 #------------------------------------------------------------------------------
 #

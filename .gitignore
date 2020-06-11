@@ -4,4 +4,4 @@ GEOS-Chem_*/
 GEOS-FP_process/
 GEOSFP_runs/
 MERRA2_process/
-MERRA2_runs/
+MERRA2_runs/GC_*

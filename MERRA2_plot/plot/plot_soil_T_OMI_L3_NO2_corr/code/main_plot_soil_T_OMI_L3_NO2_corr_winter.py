@@ -22,13 +22,13 @@ r_vmin = -0.8
 r_vmax = 0.8
 
 varname_list = ['multimonth_mean', 'monthly',\
-        'month_06', 'month_07', 'month_08']
+        'month_01', 'month_02', 'month_12']
 
 #
 # End user parameters
 #####################
 
-time_range = '2005-2019_06-08'
+time_range = '2005-2019_winter'
 
 #
 argv = sys.argv[1:]
@@ -44,7 +44,7 @@ for opt, arg in opts:
         time_range = arg
 #
 
-name = 'corr_GWETTOP_NO2_Trop_CS_' + time_range
+name = 'corr_TSOIL1_NO2_Trop_CS_' + time_range
 
 corr_file = data_dir + name + '.nc'
 

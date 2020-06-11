@@ -57,7 +57,8 @@ sat_dir = '/Dedicated/jwang-data/shared_satData/OMI_NO2_L2/' + \
 #get_geosfp_A1 = get_geosfp_hourly_A1_3days
 #get_geosfp_A1_hh_lag = get_geosfp_hourly_A1_3days_direct
 
-root_out_dir = '../data/granule/'
+root_out_dir = '/Dedicated/jwang-data/ywang/soil_NOx/\
+MERRA2_plot/process/resample/data/granule/'
 
 
 # species names
