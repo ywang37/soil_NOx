@@ -20,6 +20,14 @@ from sn_io import save_ave
 # Start user parameters
 #
 
+# usage:
+# python main_granule_to_daily.py startDate endDate
+# startDate and endDate formats are like YYYY-MM-DD
+# startDate and endDate must be in the same month
+
+startDate = sys.argv[1]
+endDate   = sys.argv[2]
+
 scene_list = ['ori', 'soil_T_ori', 'surf_T_obs', 'soil_T_obs']
 
 tp_list = ['tp_sat']
@@ -28,8 +36,8 @@ root_granule_dir = '../data/granule/'
 
 root_daily_dir = '../data/daily/'
 
-startDate = '2010-06-01'
-endDate   = '2010-08-31'
+#startDate = '2010-06-01'
+#endDate   = '2010-08-31'
 
 # model species name
 mod_spe_name = 'mod_NO2Trop'

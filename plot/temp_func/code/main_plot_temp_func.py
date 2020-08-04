@@ -29,6 +29,9 @@ O_temp = np.array(temp2)
 O_temp[O_temp>=40.0] = 40.0
 O_temp_func = polyval(O_temp, [d,c,b,a])
 
+print(polyval(np.array([30,40]), [d,c,b,a]))
+exit()
+
 # plot
 fig = plt.figure()
 ax = fig.add_subplot(111)

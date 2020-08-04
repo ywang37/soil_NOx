@@ -23,7 +23,11 @@ fig_dir = '../figure/'
 
 scene_tup = ['ori', 'soil_T_ori', 'surf_T_obs', 'soil_T_obs']
 
-month = '201806'
+#month = '201806'
+month_list = []
+for yr in range(2005,2020):
+    for mo in range(6,9):
+        month_list.append(str(yr) + str(mo).zfill(2))
 
 varname = 'EmisNO_Soil'
 
@@ -41,6 +45,10 @@ units = r'[ng N m$^{-2}$ s$^{-1}$]'
 cb_ticks = None
 cb_ticklabels = None
 
+
+emi_flag = True
+
+valid_min = 1e-6
 
 vmax_diff = 10.0
 vmin_diff = -vmax_diff
@@ -84,34 +92,39 @@ diff_title_list = \
 #####################
 
 
-# emissions
-plot_panel_variables(root_dir, scene_tup, month,
-        path=2,
-        varname=varname, vmin=vmin, vmax=vmax, units=units,
-        gc_run=gc_run,
-        subdir=subdir,
-        scene_prefix=scene_prefix,
-        scale=scale,
-        lw=lw,
-        title_list=title_list,
-        cb_ticks=cb_ticks, cb_ticklabels=cb_ticklabels)
-figname = fig_dir + varname + '_' + month + '.png'
-plt.savefig(figname, format='png', dpi=300)
+for month in month_list:
 
-# emission differences
-plot_panel_variables(root_dir, scene_tup, month,
-        path=2,
-        varname=varname,  vmin=vmin, vmax=vmax, units=units, 
-        vmin_diff=vmin_diff, vmax_diff=vmax_diff, units_diff=units_diff,
-        gc_run=gc_run,
-        subdir=subdir,
-        scene_prefix=scene_prefix,
-        scale=scale,
-        diff=True, layout=layout_2,
-        lw=lw,
-        title_list=diff_title_list,
-        cb_ticks=cb_ticks, cb_ticklabels=cb_ticklabels,
-        cb_ticks_diff=cb_ticks_diff, cb_ticklabels_diff=cb_ticklabels_diff,
-        )
-figname = fig_dir + varname + '_diff_' + month + '.png'
-plt.savefig(figname, format='png', dpi=300)
+    # emissions
+    plot_panel_variables(root_dir, scene_tup, month,
+            path=2,
+            varname=varname, vmin=vmin, vmax=vmax, units=units,
+            gc_run=gc_run,
+            valid_min=valid_min,
+            subdir=subdir,
+            scene_prefix=scene_prefix,
+            scale=scale,
+            lw=lw,
+            title_list=title_list,
+            cb_ticks=cb_ticks, cb_ticklabels=cb_ticklabels)
+    figname = fig_dir + varname + '_' + month + '.png'
+    plt.savefig(figname, format='png', dpi=300)
+
+    # emission differences
+    plot_panel_variables(root_dir, scene_tup, month,
+            path=2,
+            varname=varname,  vmin=vmin, vmax=vmax, units=units, 
+            vmin_diff=vmin_diff, vmax_diff=vmax_diff, units_diff=units_diff,
+            gc_run=gc_run,
+            valid_min=valid_min,
+            emi_flag=emi_flag,
+            subdir=subdir,
+            scene_prefix=scene_prefix,
+            scale=scale,
+            diff=True, layout=layout_2,
+            lw=lw,
+            title_list=diff_title_list,
+            cb_ticks=cb_ticks, cb_ticklabels=cb_ticklabels,
+            cb_ticks_diff=cb_ticks_diff, cb_ticklabels_diff=cb_ticklabels_diff,
+            )
+    figname = fig_dir + varname + '_diff_' + month + '.png'
+    plt.savefig(figname, format='png', dpi=300)

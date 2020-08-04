@@ -19,9 +19,11 @@ out_root_dir = '../data/'
 
 scene_tup = ['ori', 'soil_T_ori', 'surf_T_obs', 'soil_T_obs']
 
-year_list = [2018]
+#year_list = [2018]
 
-month_list = [6]
+month_list = [6, 7, 8]
+
+year_list = list(range(2005,2020))
 
 #
 # End user parameters

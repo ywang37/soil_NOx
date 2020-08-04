@@ -13,7 +13,11 @@ import os
 month_list = ['06', '07', '08']
 
 #year_list = ['2016', '2017', '2018', '2019']
-year_list = ['2010', '2012']
+#year_list = ['2010', '2012']
+
+year_list = []
+for year in range(2005, 2020):
+    year_list.append(str(year))
 
 day_dict = {
         '06' : '30',

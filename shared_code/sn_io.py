@@ -12,6 +12,7 @@ import numpy as np
 import os
 
 from mylib.constants import molec_to_kgN
+from mylib.constants import kg_NO_to_ng_N, kg_NO2_to_ng_N
 from mylib.grid_utility import generate_grid_gc_2x25, get_center_index
 from mylib.grid_utility import get_center_index_latlon
 from mylib.io import read_nc
@@ -106,6 +107,54 @@ def read_NO_emissions(filename, varns=[], verbose=True,
             if var != 'AREA':
                 out_data[var+'_amount'] = out_data[var] * day_sceonds * AREA \
                         * molec_to_kgN
+
+    return out_data
+#
+#------------------------------------------------------------------------------
+#
+def read_NOx_emissions(filename, varns=[], coor_varns=[],
+        verbose=True, suffix=''):
+    """
+    In unit is kg/m2/s
+    Out unit is ng N/m2/s
+    """
+
+    if len(varns)  == 0:
+        varnames = ['EmisNO_Soil', 'EmisNO_BioBurn', \
+                'EmisNO_Anthro', 'EmisNO_Lightning', \
+                'EmisNO2_Anthro']
+    else:
+        varnames = deepcopy(varns)
+    varnames = varnames + coor_varns
+    varnames = list(set(varnames))
+
+    if verbose:
+        print(' - read_NOx_emissions: reading ' + filename)
+
+    if suffix != '':
+        for i in range(len(varnames)):
+            if varnames[i] not in coor_varns:
+                varnames[i] = varnames[i] + suffix
+
+
+    # read data
+    out_data = read_nc(filename, varnames, squeeze=False)
+    for var in out_data:
+
+        if out_data[var].ndim == 4:
+            out_data[var] = np.nansum(out_data[var], axis=1)
+
+        out_data[var] = np.squeeze(out_data[var])
+
+    for var in out_data:
+
+        # NO kg/m2/s => ng N/m2/s
+        if 'EmisNO_' in var:
+            out_data[var] = out_data[var] * kg_NO_to_ng_N
+
+        # NO2 kg/m2/s => ng N/m2/s
+        if 'EmisNO2_' in var:
+            out_data[var] = out_data[var] * kg_NO2_to_ng_N
 
     return out_data
 #

@@ -11,7 +11,7 @@ import os
 # Start user parameters
 #
 
-year = 2006
+year = 2005
 month = 8
 
 scene_list = ['GC_ori', 'GC_soil_T_obs', 'GC_soil_T_ori', 'GC_surf_T_obs']
@@ -20,14 +20,14 @@ scene_list = ['GC_ori', 'GC_soil_T_obs', 'GC_soil_T_ori', 'GC_surf_T_obs']
 root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/MERRA2_runs/'
 
 queue_dict = {}
-#queue_dict['GC_ori']        = 'ARROMA'
-#queue_dict['GC_soil_T_obs'] = 'ARROMA'
-#queue_dict['GC_soil_T_ori'] = 'ARROMA'
-#queue_dict['GC_surf_T_obs'] = 'ARROMA'
-queue_dict['GC_ori']        = 'INFORMATICS'
-queue_dict['GC_soil_T_obs'] = 'INFORMATICS'
-queue_dict['GC_soil_T_ori'] = 'INFORMATICS'
-queue_dict['GC_surf_T_obs'] = 'INFORMATICS'
+queue_dict['GC_ori']        = 'ARROMA'
+queue_dict['GC_soil_T_obs'] = 'ARROMA'
+queue_dict['GC_soil_T_ori'] = 'ARROMA'
+queue_dict['GC_surf_T_obs'] = 'ARROMA'
+#queue_dict['GC_ori']        = 'INFORMATICS'
+#queue_dict['GC_soil_T_obs'] = 'INFORMATICS'
+#queue_dict['GC_soil_T_ori'] = 'INFORMATICS'
+#queue_dict['GC_surf_T_obs'] = 'INFORMATICS'
 #queue_dict['GC_ori']        = 'CGRER'
 #queue_dict['GC_soil_T_obs'] = 'CGRER'
 #queue_dict['GC_soil_T_ori'] = 'CGRER'

@@ -46,38 +46,57 @@ def layout_3(top=0.95, bottom=0.10,
 
 
 
+#
+#------------------------------------------------------------------------------
+#
 def plot_panel_variables(root_dir, scene_tup, month,
         varname='EmisNO_Soil', read_func=read_nc_emissions_multifiles,
         path=1,
         gc_run='geosfp_2x25_tropchem', res='2x25',
         read_func_varname='emi_dict',
         scene_prefix='GEOS-Chem_',
+        cl_res='110m',
+        cl_color='k',
+        emi_flag=False,
+        flag_nan=False,
+        flag_diff_nan=False,
+        ocean_color=None,
         subdir='',
         scale=1.0,
         vmin=None, vmax=None, units='',
+        valid_min=None,
         cmap=None, cb_ticks=None, cb_ticklabels=None,
         seperate_cbar=False,
+        cb1_extend=None,
+        cb2_extend='max',
         vmin_diff=None, vmax_diff=None, units_diff='',
         cmap_diff=None, cb_ticks_diff=None, cb_ticklabels_diff=None,
         lw=None,
         title_list=None,
-        diff=False, verbose=True, layout=layout_1):
+        region_limit=None,
+        xtick=np.arange(-180, 180.0, 60),
+        ytick=None,
+        diff=False, verbose=True, layout=layout_1,
+        hspace=None):
     """
     """
 
     # read all data
-    data_dict = read_func(root_dir, scene_tup, month,
-            varname, gc_run=gc_run, res=res,
-            scene_prefix=scene_prefix,
-            path=path,
-            subdir=subdir,
-            verbose=verbose)
+    if isinstance(root_dir, str):
+        data_dict = read_func(root_dir, scene_tup, month,
+                varname, gc_run=gc_run, res=res,
+                scene_prefix=scene_prefix,
+                path=path,
+                subdir=subdir,
+                verbose=verbose)
+    else:
+        data_dict = root_dir
 
     # plot
     fig = plt.figure()
     ax_list = []
-    xtick = [[], [], np.arange(-180, 180.0, 60), None]
-    ytick = [None, [], None, []]
+    xtick_list = [[], [], xtick, xtick]
+    ytick_list = [ytick, [], ytick, []]
     for i in range(len(scene_tup)):
         scene = scene_tup[i]
         if title_list is None:
@@ -90,7 +109,7 @@ def plot_panel_variables(root_dir, scene_tup, month,
         ax = add_geoaxes(fig, int('22'+str(i+1)),
                 title=title,
                 lw=lw,
-                xtick=xtick[i], ytick=ytick[i])
+                xtick=xtick_list[i], ytick=ytick_list[i])
         ax_list.append(ax)
 
     lat_e = data_dict['lat_e']
@@ -112,26 +131,46 @@ def plot_panel_variables(root_dir, scene_tup, month,
         if ( (i >= 1) and diff ):
             emi0 = data_dict[read_func_varname][scene_tup[0]] * scale
             emi_diff = emi - emi0
-            flag = np.logical_and(emi0<1e-6, emi<1e-6)
-            emi_diff = np.ma.masked_array(emi_diff, flag)
+            if (valid_min is not None) and emi_flag:
+                flag = np.logical_and(emi0<valid_min, emi<valid_min)
+                emi_diff = np.ma.masked_array(emi_diff, flag)
+            if flag_diff_nan:
+                tmp_d = data_dict[read_func_varname+'_diff_nan'][scene_tup[i]]
+                emi_diff[tmp_d] = np.nan
             cp_out = cartopy_plot(lon_e, lat_e, emi_diff, ax=ax,
                     cbar=seperate_cbar, cmap=cmap_diff,
                     vmin=vmin_diff, vmax=vmax_diff,
                     )
             cp_out_list.append(cp_out)
         else:
+            if flag_nan:
+                tmp = data_dict[read_func_varname+'_nan'][scene_tup[i]]
+                emi[tmp] = np.nan
             cp_out = cartopy_plot(lon_e, lat_e, emi, ax=ax, 
                     cbar=seperate_cbar, cmap=cmap,
-                    vmin=vmin, vmax=vmax, valid_min=1e-6)
+                    vmin=vmin, vmax=vmax, valid_min=valid_min)
             cp_out_list.append(cp_out)
 
     # layout
     layout()
+    if hspace is not None:
+        plt.subplots_adjust(hspace=hspace)
+
+    states_provinces = cfeature.NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
 
     for ax in ax_list:
         ax.add_feature(cfeature.BORDERS)
-        #ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
-        #ax.add_feature(cfeature.OCEAN, color='w', zorder=100)
+        ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+        if ocean_color is not None:
+            ax.add_feature(cfeature.OCEAN, color=ocean_color, zorder=100)
+            ax.coastlines(resolution=cl_res, color=cl_color, lw=lw, zorder=300)
+        if region_limit is not None:
+            ax.set_xlim([region_limit[1], region_limit[3]])
+            ax.set_ylim([region_limit[0], region_limit[2]])
 
     # colorbar axes parameter
     h = 0.03
@@ -152,13 +191,15 @@ def plot_panel_variables(root_dir, scene_tup, month,
     # parameters for cax1
     if diff:
         cb1_mesh = cp_out_list[3]['mesh']
-        cb1_extend = 'both'
+        if cb1_extend is None:
+            cb1_extend = 'both'
         cb1_ticks = cb_ticks_diff
         cb1_ticklabels = cb_ticklabels_diff
         cb1_units = units_diff
     else:
         cb1_mesh = cp_out_list[0]['mesh']
-        cb1_extend = 'max'
+        if cb1_extend is None:
+            cb1_extend = 'max'
         cb1_ticks = cb_ticks
         cb1_ticklabels = cb_ticklabels
         cb1_units = units
@@ -177,7 +218,7 @@ def plot_panel_variables(root_dir, scene_tup, month,
     # colorbar 2
     if diff:
         cb2 = plt.colorbar(cp_out_list[0]['mesh'], cax=cax2,
-                orientation='horizontal', extend='max')
+                orientation='horizontal', extend=cb2_extend)
         cax2.yaxis.set_label_position('right')
         cax2.set_ylabel(units, rotation=0, ha='left', va='center')
         if cb_ticks is not None:
@@ -185,6 +226,146 @@ def plot_panel_variables(root_dir, scene_tup, month,
             if cb_ticklabels is not None:
                 cb2.set_ticklabels(cb_ticklabels)
 
+#
+#------------------------------------------------------------------------------
+#
+def plot_compare_4_to_1_new(data_dict,
+        portrait=True,
+        left=0.08, right=0.97,
+        top=0.95, bottom=0.1,
+        hspace=0.1, wspace=0.02,
+        region_limit=None,
+        xticks=np.arange(-180, 180.0, 60),
+        yticks=np.arange(-90, 90.1, 30),
+        cl_res='110m',
+        cl_color='k',
+        lw=None,
+        ocean_color=None,
+        title_dict={},
+        vmin1=None, vmax1=None, units1='',
+        cmap1=None, cb_ticks1=None, cb_ticklabels1=None,
+        cb1_extend='max',
+        vmin_diff=None, vmax_diff=None, units_diff='',
+        cmap_diff=None, cb_ticks_diff=None, cb_ticklabels_diff=None,
+        cb_diff_extend='both',
+        cb_ratio = 0.04,
+        cb1_y_off = -0.03,
+        cb_diff_y_off = -0.06,
+        ):
+    """
+    """
+
+    # layout
+    if portrait:
+        nrow = 3
+        ncol = 2
+        figsize = (6.4, 7.2)
+        varn_list = ['OMI', 'ori', 'diff_ori',
+                'diff_soil_T_ori', 'diff_surf_T_obs', 'diff_soil_T_obs']
+    else:
+        nrow = 2
+        ncol = 3
+        figsize = (9.6, 4.8)
+        varn_list = ['OMI', 'diff_ori', 'diff_soil_T_ori', 
+                'ori', 'diff_surf_T_obs', 'diff_soil_T_obs']
+    projPos = list(range(nrow * ncol))
+    layout_dict = multiFigure(nrow, ncol,
+            left=left, right=right, top=top, bottom=bottom,
+            wspace=wspace, hspace=hspace,
+            figsize=figsize, projPos=projPos)
+    fig  = layout_dict['fig']
+    axes = layout_dict['axes']
+    lat_e = data_dict['Latitude_e']
+    lon_e = data_dict['Longitude_e']
+
+    if vmin1 is None:
+        vmin1 = np.nanmin(data_dict['OMI'])
+    if vmax1 is None:
+        vmax1 = np.nanmax(data_dict['OMI'])
+    if vmin_diff is None:
+        vmin_diff = -vmax1
+    if vmax_diff is None:
+        vmax_diff = vmax1
+
+    pout_list = []
+    for i in range(len(projPos)):
+
+        ax = axes[i]
+        varname = varn_list[i]
+        data = data_dict[varname]
+        title = title_dict.get(varname, '')
+
+        if ('diff' in varname):
+            vmin = vmin_diff
+            vmax = vmax_diff
+            cmap = cmap_diff
+        else:
+            vmin = vmin1
+            vmax = vmax1
+            cmap = cmap1
+
+        pout = cartopy_plot(lon_e, lat_e, data, ax=ax, title=title,
+                cbar=False, vmin=vmin, vmax=vmax, cmap=cmap)
+        pout_list.append(pout)
+
+    states_provinces = cfeature.NaturalEarthFeature(
+            category='cultural',
+            name='admin_1_states_provinces_lines',
+            scale='50m',
+            facecolor='none')
+
+    # set limit
+    for ax in axes:
+        ax.add_feature(cfeature.BORDERS)
+        ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
+        ax.coastlines(resolution=cl_res, color=cl_color, lw=lw, zorder=300)
+        if ocean_color is not None:
+            ax.add_feature(cfeature.OCEAN, color=ocean_color, zorder=100)
+            ax.coastlines(resolution=cl_res, color=cl_color, lw=lw, zorder=300)
+        if region_limit is not None:
+            ax.set_xlim((region_limit[1],region_limit[3]))
+            ax.set_ylim((region_limit[0],region_limit[2]))
+
+
+    # ticks
+    panel_tick_label(axes, ncol, xticks=xticks, yticks=yticks)
+
+
+    # colorbar axes parameter
+
+    if portrait:
+        
+        pos11 = pout_list[0]['ax']
+        pos12 = pout_list[1]['ax']
+        cax1 = h_2_ax(fig, pos11, pos12, ratio=cb_ratio, y_off=cb1_y_off)
+        cb1 = plt.colorbar(pout_list[0]['mesh'], cax=cax1,
+                orientation='horizontal', extend=cb1_extend)
+        right_center_label(cax1, units1)
+
+    else:
+
+        pos11 = pout_list[3]['ax']
+        cax1 = h_1_ax(fig, pos11, ratio=cb_ratio, y_off=cb1_y_off)
+        cb1 = plt.colorbar(pout_list[3]['mesh'], cax=cax1,
+                orientation='horizontal', extend=cb1_extend)
+        right_center_label(cax1, units1)
+
+
+    pos21 = pout_list[4]['ax']
+    pos22 = pout_list[5]['ax']
+    cax2 = h_2_ax(fig, pos21, pos22, ratio=cb_ratio, 
+            y_off=cb_diff_y_off)
+    cb2 = plt.colorbar(pout_list[4]['mesh'], cax=cax2,
+            orientation='horizontal',
+            extend=cb_diff_extend)
+    cb2.set_ticks(cb_ticks_diff)
+    right_center_label(cax2, units_diff)
+
+
+
+#
+#------------------------------------------------------------------------------
+#
 def plot_compare_4_to_1(var_dict, sat_varname, 
         mod_varname_list, sat_sim_name,
         mod_sim_name_dict,
@@ -1031,9 +1212,95 @@ def plot_ave_series(data, area, lat_e, lon_e, units='',
     if time_ticks is not None:
         axes[1].set_xticks(time_ticks[0])
         axes[1].set_xticklabels(time_ticks[1], rotation=rotation)
+#
+#------------------------------------------------------------------------------
+#
+def plot_time_series(data_dict, varnames, xx, label_dict={},
+        ratio=False, xlabel='', ylabel='', xlim=None, ylim=None,
+        scale=1.0):
+    """
+    (ywang, 07/08/2020)
+    """
+
+    out_dict = {}
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    out_dict['fig'] = fig
+    out_dict['ax']  = ax
+
+    for varn in varnames:
+
+        yy = deepcopy(data_dict[varn])
+        if ratio:
+            yy = yy / yy[0]
+
+        label = label_dict.get(varn, '')
+
+        ax.plot(xx, yy * scale, marker="o", label=label)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
 
 
-    
+    plt.subplots_adjust(left=0.20, right=0.80, bottom=0.25, top=0.75)
+
+    plt.legend(loc='best')
+
+    return out_dict
+#
+#------------------------------------------------------------------------------
+#
+def plot_stackplot(data_dict, varnames, xx, label_dict={},
+         xlabel='', ylabel='', xlim=None, ylim=None,
+         scale=1.0, xminorticks=None):
+    """
+    (ywang, 07/10/2020)
+    """
+
+    out_dict = {}
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    out_dict['fig'] = fig
+    out_dict['ax']  = ax
+
+    yy_list = []
+    labels = []
+    for varn in varnames:
+
+        y = deepcopy(data_dict[varn]) * scale
+        yy_list.append(y)
+
+        labels.append(label_dict[varn])
+
+    yy = np.vstack(yy_list)
+
+    ax.stackplot(xx, yy, labels=labels)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    if xminorticks is not None:
+        ax.set_xticks(xminorticks, minor=True)
+
+    plt.subplots_adjust(left=0.20, right=0.80, bottom=0.25, top=0.75)
+
+    plt.legend(loc='best')
+
+    return out_dict
 #
 #------------------------------------------------------------------------------
 #
