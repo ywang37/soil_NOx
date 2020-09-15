@@ -12,20 +12,21 @@ import os
 #
 
 year = 2012
-month = 8
+month = 7
 
-#scene_list = ['GC_ori', 'GC_soil_T_obs', 'GC_soil_T_ori', 'GC_surf_T_obs']
-scene_list = ['GC_ori', 'GC_soil_T_obs']
+scene_list = ['GC_ori_all_scale_0.50', 'GC_soil_T_obs_all_scale_0.50']
 
 root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/MERRA2_runs/'
 
 queue_dict = {}
-#queue_dict['GC_ori']        = 'ARROMA'
-#queue_dict['GC_soil_T_obs'] = 'ARROMA'
-#queue_dict['GC_ori']        = 'INFORMATICS'
-#queue_dict['GC_soil_T_obs'] = 'INFORMATICS'
-queue_dict['GC_ori']        = 'CGRER'
-queue_dict['GC_soil_T_obs'] = 'CGRER'
+#queue_dict['GC_ori_all_scale_0.50']        = 'ARROMA'
+#queue_dict['GC_soil_T_obs_all_scale_0.50'] = 'ARROMA'
+
+queue_dict['GC_ori_all_scale_0.50']        = 'CGRER'
+queue_dict['GC_soil_T_obs_all_scale_0.50'] = 'CGRER'
+
+#queue_dict['GC_ori_all_scale_0.50']        = 'INFORMATICS'
+#queue_dict['GC_soil_T_obs_all_scale_0.50'] = 'INFORMATICS'
 
 #
 # End user parameters
@@ -36,7 +37,7 @@ month_c = str(month).zfill(2)
 
 for scene in scene_list:
 
-    ori_dir = root_dir + scene + '/' + 'runs/merra2_2x25_tropchem'
+    ori_dir = root_dir + scene + '/' + 'runs/merra2_05x0625_tropchem_na'
 
     new_dir = ori_dir + '_' + year_c + month_c
 
@@ -64,6 +65,17 @@ for scene in scene_list:
     line4_new = '"End   YYYYMMDD, hhmmss  : ' + year_c + str(month+1).zfill(2) + '01 000000"'
     line4_cmd = 'sed -i 4s/' + line4_ori + '/' + line4_new + '/ ' + input_file
     os.system(line4_cmd)
+
+    ##################
+    # HEMCO_Config.rc
+    ##################
+    hem_cfg_file = new_dir + '/HEMCO_Config.rc'
+    ori_bc_dir = '/BC_Dir'
+    new_bc_dir = new_dir.replace('05x0625', '2x25')
+    new_bc_dir = new_bc_dir.replace('na_', '')
+    new_bc_dir = new_bc_dir + '/OutputDir'
+    bc_cmd = 'sed -i s#' + ori_bc_dir + '#' + new_bc_dir + '# ' + hem_cfg_file
+    os.system(bc_cmd)
 
     ###########
     # edit run

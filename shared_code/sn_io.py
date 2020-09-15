@@ -122,7 +122,7 @@ def read_NOx_emissions(filename, varns=[], coor_varns=[],
     if len(varns)  == 0:
         varnames = ['EmisNO_Soil', 'EmisNO_BioBurn', \
                 'EmisNO_Anthro', 'EmisNO_Lightning', \
-                'EmisNO2_Anthro']
+                'EmisNO2_Anthro', 'EmisNO_Total']
     else:
         varnames = deepcopy(varns)
     varnames = varnames + coor_varns

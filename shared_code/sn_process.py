@@ -12,6 +12,7 @@ import numpy as np
 import os
 
 from mylib.grid_utility import generate_grid_gc_2x25, get_2D_center_index
+from mylib.grid_utility import generate_grid_2
 from mylib.io import read_nc, write_nc
 
 #
@@ -23,6 +24,16 @@ def daily_to_monthly_emissions(inDir, outDir, year, month, res='2x2.5'):
 
     if res == '2x2.5':
         lat_e, lon_e, lat_c, lon_c = generate_grid_gc_2x25()
+    elif res == 'na_05x0625':
+        lat_min =    9.75
+        lat_max =   70.25
+        lat_res =    0.5
+        lon_min = -140.3125
+        lon_max =  -39.6875
+        lon_res =    0.625
+        lat_e, lon_e, lat_c, lon_c = \
+                generate_grid_2(lat_res, lat_min, lat_max,
+                        lon_res, lon_min, lon_max)
     lon_e, lat_e = np.meshgrid(lon_e, lat_e)
     lon_c, lat_c = np.meshgrid(lon_c, lat_c)
 
@@ -71,8 +82,14 @@ def daily_to_monthly_emissions(inDir, outDir, year, month, res='2x2.5'):
         dd   = currDate[8:10]
         yyyymmdd = yyyy + mm + dd
 
-        infile = inDir + 'merra2_2x25_tropchem_' + yyyymm + '/OutputDir/' + \
-                'HEMCO_diagnostics.' + yyyymmdd + '0000.nc'
+        if res == '2x2.5':
+            
+            infile = inDir + 'merra2_2x25_tropchem_' + yyyymm + '/OutputDir/' \
+                    + 'HEMCO_diagnostics.' + yyyymmdd + '0000.nc'
+
+        elif res == 'na_05x0625':
+            infile = inDir + 'merra2_05x0625_tropchem_na_' + yyyymm + \
+                    '/OutputDir/' + 'HEMCO_diagnostics.' + yyyymmdd + '0000.nc' 
 
         print(' - daily_to_monthly_emissions: reading ' + infile)
 

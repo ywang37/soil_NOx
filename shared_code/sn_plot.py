@@ -8,6 +8,7 @@ import cartopy.feature as cfeature
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from scipy.stats import pearsonr
 
 from sn_io import read_nc_emissions_multifiles
@@ -867,15 +868,19 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
         yticks=np.arange(-90.0, 90.1, 5),
         T_edge = [20.0, 25.0, 30.0, 35.0, 40.0, 45.0, 50.0],
         left=0.1, right=0.95, top=0.9, bottom=0.1,
-        wspace=0.4, hspace=0.4,
+        wspace=0.3, hspace=0.3, map_region_limit=None,
+        color_list=None,
+        old_labels=None,
+        ax1_ylim=None,
         ):
     """
     (ywang, 03/31/20)
     """
+    out_dict = {}
 
     nrow = 2
-    ncol = 2
-    figsize = (8, 8)
+    ncol = 3
+    figsize = (12, 8)
     projPos = [0]
     layout_dict = multiFigure(nrow, ncol,
             left=left, right=right, top=top, bottom=bottom,
@@ -887,7 +892,7 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
     lat_e = data_dict['Latitude_e']
     lon_e = data_dict['Longitude_e']
 
-    T_edge = np.linspace(20, 50, 16)
+    T_edge = np.linspace(20, 40, 21)
 
 
     # soil temperature
@@ -929,14 +934,19 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
     ax.add_feature(cfeature.BORDERS)
     ax.add_feature(states_provinces, edgecolor='k', linewidth=0.5)
     ax.add_feature(cfeature.COASTLINE, zorder=200)
-    ax.set_xlim([lon_e[0,0],lon_e[0,-1]])
-    ax.set_ylim([lat_e[0,0],lat_e[-1,0]])
+    if map_region_limit is None:
+        ax.set_xlim([lon_e[0,0],lon_e[0,-1]])
+        ax.set_ylim([lat_e[0,0],lat_e[-1,0]])
+    else:
+        ax.set_xlim([map_region_limit[1], map_region_limit[3]])
+        ax.set_ylim([map_region_limit[0], map_region_limit[2]])
 
     # colorbar
     cax = h_1_ax(fig, pout['ax'])
     cb = plt.colorbar(pout['mesh'], cax=cax, \
             orientation='horizontal')
-    right_center_label(cax, r'[molec cm$^{-2}$]')
+    #right_center_label(cax, r'[molec cm$^{-2}$]')
+    cb.set_label(r'[molec cm$^{-2}$]')
 
 
     # T_dict
@@ -973,14 +983,16 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
 
         flag = np.logical_and(T>T_edge[i], T<=T_edge[i+1])
 
-        # soil temperature
-        T_dict['data'].append(T[flag])
-        T_dict['ave'].append(np.nanmean(T[flag]))
+        if np.sum(flag) > 20:
 
-        # NO2
-        for j in range(len(data_list)):
-            NO2_list_dict[j]['data'].append(data_list[j][flag])
-            NO2_list_dict[j]['ave'].append(np.nanmean(data_list[j][flag]))
+            # soil temperature
+            T_dict['data'].append(T[flag])
+            T_dict['ave'].append(np.nanmean(T[flag]))
+
+            # NO2
+            for j in range(len(data_list)):
+                NO2_list_dict[j]['data'].append(data_list[j][flag])
+                NO2_list_dict[j]['ave'].append(np.nanmean(data_list[j][flag]))
 
 
     
@@ -997,10 +1009,20 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
         ratio = NO2_list_dict[i]['all_ave'] / NO2_list_dict[0]['all_ave']
         NO2_list_dict[i]['ave_ratio_nor'] = \
                 NO2_list_dict[i]['ave'] / ratio
+
+        # bias
+        NO2_list_dict[i]['bias'] = NO2_list_dict[i]['ave'] - \
+                NO2_list_dict[0]['ave']
+
+        # nmb
+        NO2_list_dict[i]['nmb'] = NO2_list_dict[i]['bias'] / \
+                NO2_list_dict[0]['ave'] * 100.0
         
 
-
-    labels = ['OMI', 'Control', 'Soil_T_old', 'Air_T_new', 'Soil_T_new']
+    if old_labels is None:
+        old_labels = ['OMI', 'Control', r'T$_{soil}$_S$_{old}$',
+                r'T$_{air}$_S$_{new}$', r'T$_{soil}$_S$_{new}$']
+    labels = deepcopy(old_labels)
 
     xlabel = u'Soil temperature [\u00B0C]'
     ylabel = r'NO$_2$ VCD [molec cm$^{-2}$]'
@@ -1011,6 +1033,9 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
 #    print(NO2_list_dict[0]['ave'])
 #    print(type(NO2_list_dict[0]['ave']))
 #    exit()
+
+    if color_list is None:
+        color_list = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6']
 
     # NO2 VS T
     ax = axes[1]
@@ -1024,14 +1049,25 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
         else:
             label = labels[i] + '({:.2f})'.format(corr_tmp[0])
         ax.plot(T_dict['ave'], NO2_list_dict[i]['ave'],
+                c=color_list[i],
                 marker='o', label=label, zorder=zorder)
         corr_no_nor.append(corr_tmp )
+    if ax1_ylim is not None:
+        ax.set_ylim(ax1_ylim)
     ax.legend(loc='best')
     ax.set_title('No normalization')
     print('--- No normalization ---')
     for i in range(len(labels)):
         print(labels[i], corr_no_nor[i])
 
+    # create pandas DataFrame
+    df = {}
+    df['soil_temp'] = T_dict['ave']
+    df['OMI'] = NO2_list_dict[0]['ave']
+    for i in range(len(scene_tup)):
+        df[scene_tup[i]] = NO2_list_dict[i+1]['ave']
+    df = pd.DataFrame(df)
+    out_dict['df'] = df
 
     # NO2 VS T (diff normal)
     ax = axes[2]
@@ -1039,6 +1075,7 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
     for i in range(len(NO2_list_dict)):
         zorder = 10 - i
         ax.plot(T_dict['ave'], NO2_list_dict[i]['ave_diff_nor'],
+                c=color_list[i],
                 marker='o', label=labels[i], zorder=zorder)
         corr_diff_nor.append( pearsonr(NO2_list_dict[i]['ave_diff_nor'][flag],
                                       NO2_list_dict[0]['ave_diff_nor'][flag]) )      
@@ -1053,27 +1090,47 @@ def plot_NO2_VS_T(data_dict, sat_varname, mod_varname,
     for i in range(len(NO2_list_dict)):
         zorder = 10 - i
         ax.plot(T_dict['ave'], NO2_list_dict[i]['ave_ratio_nor'],
+                c=color_list[i],
                 marker='o', label=labels[i], zorder=zorder)
         corr_ratio_nor.append(pearsonr(NO2_list_dict[i]['ave_ratio_nor'][flag],
                                       NO2_list_dict[0]['ave_ratio_nor'][flag]) )
     ax.set_title('Ratio normalization')
     print('--- Ratio normalization ---')
-#    for i in range(len(labels)):
-#        print(labels[i], corr_ratio_nor[i])
-#        if i > 0:
-#            x = 0.05
-#            y = 0.9 - i*0.05
-#            ax.text(x, y, str(round(corr_ratio_nor[i][0],2)), 
-#                    color='C'+str(i), transform=ax.transAxes)
 
     print('--- corr_t_range ---')
     for i in range(len(labels)):
         print(labels[i], corr_t_range[i])
 
+    # bias VS T
+    ax = axes[4]
+    for i in range(1,len(NO2_list_dict)):
+        zorder = 10 - i
+        ax.plot(T_dict['ave'], NO2_list_dict[i]['bias'],
+                marker='o', c=color_list[i], zorder=zorder,
+                label=old_labels[i])
+    ax.plot([T_dict['ave'][0], T_dict['ave'][-1]], [0, 0], 'k--')
+    ax.set_title('Bias')
+    ax.legend(loc='best')
+
+    # nmb
+    ax = axes[5]
+    for i in range(1,len(NO2_list_dict)):
+        zorder = 10 - i
+        ax.plot(T_dict['ave'], NO2_list_dict[i]['nmb'],
+                marker='o', c=color_list[i], zorder=zorder,
+                label=old_labels[i])
+    ax.plot([T_dict['ave'][0], T_dict['ave'][-1]], [0, 0], 'k--')
+    ax.set_title('Relative bias')
+    ax.legend(loc='best')
+
     for i in range(1, len(axes)):
         axes[i].set_xlabel(xlabel)
         axes[i].set_ylabel(ylabel)
 
+    axes[4].set_ylabel(r'GC NO$_2$ VCD bias [molec cm$^{-2}$]')
+    axes[5].set_ylabel(r'GC NO$_2$ VCD relative bias [%]')
+
+    return out_dict
 #
 #------------------------------------------------------------------------------
 #

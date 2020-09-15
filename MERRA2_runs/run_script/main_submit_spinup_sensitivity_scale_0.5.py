@@ -11,17 +11,21 @@ import os
 # Start user parameters
 #
 
-year = 2012
+year = 2013
 
-#scene_list = ['GC_ori', 'GC_soil_T_obs', 'GC_soil_T_ori', 'GC_surf_T_obs']
-scene_list = ['GC_ori', 'GC_soil_T_obs']
-#scene_list = ['GC_ori']
+scene_list = ['GC_ori_all_scale_0.50', 'GC_soil_T_obs_all_scale_0.50']
 
 root_dir = '/Dedicated/jwang-data/ywang/soil_NOx/MERRA2_runs/'
 
 queue_dict = {}
-queue_dict['GC_ori']        = 'CGRER'
-queue_dict['GC_soil_T_obs'] = 'CGRER'
+#queue_dict['GC_ori_all_scale_0.50'] = 'ARROMA'
+#queue_dict['GC_soil_T_obs_all_scale_0.50'] = 'ARROMA'
+
+#queue_dict['GC_ori_all_scale_0.50'] = 'CGRER'
+#queue_dict['GC_soil_T_obs_all_scale_0.50'] = 'CGRER'
+
+queue_dict['GC_ori_all_scale_0.50'] = 'INFORMATICS'
+queue_dict['GC_soil_T_obs_all_scale_0.50'] = 'INFORMATICS'
 
 
 #

@@ -50,7 +50,6 @@ varn_list = [
              'mod_Met_TSOIL1', 
             ]
 
-
 #
 # End user parameters
 #####################
@@ -62,9 +61,7 @@ end_year = 2019
 start_month = 6
 end_month = 8
 
-soil_T_thre = '27'
 
-thre_scene = 'above'
 
 argv = sys.argv[1:]
 
